@@ -1,0 +1,14 @@
+services:
+  weatherapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    container_name: weather-api
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./subscriptions.db:/app/subscriptions.db
+
