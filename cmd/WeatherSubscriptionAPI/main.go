@@ -4,16 +4,17 @@ import (
 	"WeatherSubscriptionAPI/internal/handlers"
 	"WeatherSubscriptionAPI/internal/notifier"
 	"WeatherSubscriptionAPI/internal/repository"
-	"WeatherSubscriptionAPI/internal/services"
+	service "WeatherSubscriptionAPI/internal/services"
 	"database/sql"
+	"log"
+	"os"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"log"
 	_ "modernc.org/sqlite"
-	"os"
 )
 
 // @title Weather Subscription API

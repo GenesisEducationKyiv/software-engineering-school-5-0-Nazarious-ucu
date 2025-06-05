@@ -2,7 +2,7 @@ package notifier
 
 import (
 	"WeatherSubscriptionAPI/internal/repository"
-	"WeatherSubscriptionAPI/internal/services"
+	service "WeatherSubscriptionAPI/internal/services"
 	"log"
 	"strconv"
 	"time"

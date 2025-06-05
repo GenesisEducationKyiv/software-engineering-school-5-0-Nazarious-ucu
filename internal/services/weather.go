@@ -3,6 +3,8 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -17,9 +19,9 @@ type WeatherService struct {
 	APIKey string
 }
 
-func NewWeatherService(apiKey string) *WeatherService {
-	return &WeatherService{APIKey: apiKey}
-}
+//func NewWeatherService(apiKey string) *WeatherService {
+//	return &WeatherService{APIKey: apiKey}
+//}
 
 func (s *WeatherService) GetWeather(city string) (WeatherData, error) {
 	fmt.Println("Getting weather with API token: ", s.APIKey)
@@ -30,7 +32,12 @@ func (s *WeatherService) GetWeather(city string) (WeatherData, error) {
 	if err != nil {
 		return WeatherData{}, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != 200 {
 		return WeatherData{}, fmt.Errorf("weather API error: status %d", resp.StatusCode)

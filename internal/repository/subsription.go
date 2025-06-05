@@ -2,8 +2,10 @@ package repository
 
 import (
 	"database/sql"
-	_ "modernc.org/sqlite"
+	"log"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
 
 type Subscription struct {
@@ -26,7 +28,7 @@ func (r *SubscriptionRepository) Create(email, city, token string, frequency str
 	_, err := r.DB.Exec(
 		`INSERT INTO subscriptions (email, city, token, confirmed, unsubscribed, created_at, frequency, last_sent)
          VALUES (?, ?, ?, 0, 0, ?, ?, null)`,
-		email, city, token, time.Now(),
+		email, city, token, time.Now(), frequency,
 	)
 	return err
 }
@@ -62,7 +64,12 @@ func (r *SubscriptionRepository) GetConfirmedSubscriptions() ([]Subscription, er
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(rows)
 
 	var subs []Subscription
 	now := time.Now()

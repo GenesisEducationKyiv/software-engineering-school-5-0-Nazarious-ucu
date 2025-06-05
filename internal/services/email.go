@@ -61,14 +61,14 @@ func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
 	return smtp.SendMail(addr, auth, e.From, []string{toEmail}, msg)
 }
 
-func (s *EmailService) Send(to, subject, body string) error {
-	auth := smtp.PlainAuth("", s.User, s.Password, s.Host)
+func (e *EmailService) Send(to, subject, body string) error {
+	auth := smtp.PlainAuth("", e.User, e.Password, e.Host)
 
-	msg := "From: " + s.From + "\n" +
+	msg := "From: " + e.From + "\n" +
 		"To: " + to + "\n" +
 		"Subject: " + subject + "\n\n" +
 		body
 
-	addr := s.Host + ":" + s.Port
-	return smtp.SendMail(addr, auth, s.User, []string{to}, []byte(msg))
+	addr := e.Host + ":" + e.Port
+	return smtp.SendMail(addr, auth, e.User, []string{to}, []byte(msg))
 }

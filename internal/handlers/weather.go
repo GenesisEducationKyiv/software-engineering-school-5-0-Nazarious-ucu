@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"WeatherSubscriptionAPI/internal/services"
-	"github.com/gin-gonic/gin"
+	service "WeatherSubscriptionAPI/internal/services"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type WeatherHandler struct {
