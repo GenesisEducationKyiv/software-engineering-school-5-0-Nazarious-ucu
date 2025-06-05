@@ -1,5 +1,5 @@
 services:
-  weatherapi:
+  weather-api:
     build:
       context: .
       dockerfile: Dockerfile

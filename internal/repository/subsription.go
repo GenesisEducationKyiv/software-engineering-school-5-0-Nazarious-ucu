@@ -8,6 +8,8 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+const dayHours = 24
+
 type Subscription struct {
 	ID         int
 	Email      string
@@ -94,7 +96,7 @@ func (r *SubscriptionRepository) GetConfirmedSubscriptions() ([]Subscription, er
 			case "hourly":
 				shouldSend = now.Sub(*sub.LastSentAt) >= time.Hour
 			case "daily":
-				shouldSend = now.Sub(*sub.LastSentAt) >= 24*time.Hour
+				shouldSend = now.Sub(*sub.LastSentAt) >= dayHours*time.Hour
 			}
 		}
 

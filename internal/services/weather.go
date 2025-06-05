@@ -19,6 +19,8 @@ type WeatherService struct {
 	APIKey string
 }
 
+const timeoutTime = 10 * time.Second
+
 //func NewWeatherService(apiKey string) *WeatherService {
 //	return &WeatherService{APIKey: apiKey}
 //}
@@ -27,7 +29,7 @@ func (s *WeatherService) GetWeather(city string) (WeatherData, error) {
 	fmt.Println("Getting weather with API token: ", s.APIKey)
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", s.APIKey, city)
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: timeoutTime}
 	resp, err := client.Get(url)
 	if err != nil {
 		return WeatherData{}, err
@@ -39,7 +41,7 @@ func (s *WeatherService) GetWeather(city string) (WeatherData, error) {
 		}
 	}(resp.Body)
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return WeatherData{}, fmt.Errorf("weather API error: status %d", resp.StatusCode)
 	}
 
