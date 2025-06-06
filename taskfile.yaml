@@ -25,6 +25,8 @@ tasks:
 
   lint:
     desc: "Run golangci-lint"
+    deps:
+      - install:lint
     preconditions:
       - command -v golangci-lint
     cmds:
