@@ -40,7 +40,7 @@ tasks:
   install:lint:
     desc: "Install golangci-lint"
     cmds:
-      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.58.2
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
     status:
       - command -v golangci-lint
 
