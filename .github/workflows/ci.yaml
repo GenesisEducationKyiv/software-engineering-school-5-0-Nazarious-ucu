@@ -23,6 +23,7 @@ jobs:
         run: |
             go mod tidy
             go mod download
+            go mod vendor
 
       - name: Install Task
         uses: arduino/setup-task@v2
