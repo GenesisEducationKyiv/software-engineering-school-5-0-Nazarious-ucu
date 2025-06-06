@@ -7,9 +7,9 @@ on:
     branches: ['*']
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 5
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,16 +20,26 @@ jobs:
           go-version: '1.22'
 
       - name: Install Task
-        uses: go-task/setup-task@v1
-
-      - name: Install Goose
-        run: go install github.com/pressly/goose/v3/cmd/goose@latest
+        uses: arduino/setup-task@v2
 
       - name: Run Linter
         run: task lint
 
-      - name: Run DB migrations (test)
-        run: task migrations-up
 
-      - name: Run Tests
-        run: go test ./... -v
+  migrate-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install Goose
+        run: go install github.com/pressly/goose/v3/cmd/goose@latest
+
+      - name: Run DB migrations
+        run: task migrations-up
