@@ -3,6 +3,7 @@ package notifier
 import (
 	"WeatherSubscriptionAPI/internal/repository"
 	service "WeatherSubscriptionAPI/internal/services"
+	"context"
 	"log"
 	"strconv"
 	"time"
@@ -15,7 +16,8 @@ const (
 	sleepTime  = 5 * time.Minute
 )
 
-func StartWeatherNotifier(repo *repository.SubscriptionRepository, serviceWeather *service.WeatherService, serviceEmail *service.EmailService) {
+func StartWeatherNotifier(repo *repository.SubscriptionRepository,
+	serviceWeather *service.WeatherService, serviceEmail *service.EmailService) {
 	go func() {
 		for {
 			log.Println("Checking for subscriptions to send weather updates")
@@ -28,7 +30,6 @@ func StartWeatherNotifier(repo *repository.SubscriptionRepository, serviceWeathe
 
 			now := time.Now()
 			for _, sub := range subs {
-
 				if shouldSendUpdate(sub, now) {
 					err := sendWeatherUpdate(sub, serviceWeather, serviceEmail, repo)
 
@@ -61,8 +62,11 @@ func shouldSendUpdate(sub repository.Subscription, now time.Time) bool {
 	return now.After(nextTime)
 }
 
-func sendWeatherUpdate(sub repository.Subscription, weatherSvc *service.WeatherService, emailSvc *service.EmailService, repo *repository.SubscriptionRepository) error {
-	forecast, err := weatherSvc.GetWeather(sub.City)
+func sendWeatherUpdate(sub repository.Subscription, weatherSvc *service.WeatherService,
+	emailSvc *service.EmailService, repo *repository.SubscriptionRepository) error {
+	ctx := context.Background() // або переданий контекст зверху
+
+	forecast, err := weatherSvc.GetWeather(ctx, sub.City)
 	if err != nil {
 		log.Println("Weather fetch error for", sub.City, ":", err)
 		return err

@@ -30,20 +30,20 @@ func main() {
 
 	db, err := sql.Open("sqlite", "./subscriptions.db")
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	defer func(db *sql.DB) {
 		err := db.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 	}(db)
 
 	if err := goose.SetDialect("sqlite"); err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	if err := goose.Up(db, "migrations"); err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	r := gin.Default()

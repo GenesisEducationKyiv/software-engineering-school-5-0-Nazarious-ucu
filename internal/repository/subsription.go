@@ -28,7 +28,8 @@ func NewSubscriptionRepository(db *sql.DB) *SubscriptionRepository {
 
 func (r *SubscriptionRepository) Create(email, city, token string, frequency string) error {
 	_, err := r.DB.Exec(
-		`INSERT INTO subscriptions (email, city, token, confirmed, unsubscribed, created_at, frequency, last_sent)
+		`INSERT INTO subscriptions 
+    				(email, city, token, confirmed, unsubscribed, created_at, frequency, last_sent)
          VALUES (?, ?, ?, 0, 0, ?, ?, null)`,
 		email, city, token, time.Now(), frequency,
 	)
@@ -69,7 +70,7 @@ func (r *SubscriptionRepository) GetConfirmedSubscriptions() ([]Subscription, er
 	defer func(rows *sql.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 	}(rows)
 

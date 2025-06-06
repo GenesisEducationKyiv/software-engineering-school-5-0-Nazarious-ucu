@@ -1,0 +1,60 @@
+version: '3'
+
+
+dotenv:
+  - .env
+
+tasks:
+  default:
+    desc: "Show available tasks"
+    cmds:
+      - task --list-all
+
+  run:
+    desc: "Run service"
+    cmds:
+      - docker-compose up -d
+
+  stop:
+    desc: "Stop service"
+    cmds:
+      - docker-compose down
+
+  clear:
+    desc: "Clear all"
+
+  lint:
+    desc: "Run golangci-lint"
+    preconditions:
+      - command -v golangci-lint
+    cmds:
+      - golangci-lint run --config <(curl -sSfL https://raw.githubusercontent.com/fabl3ss/genesis-se-school-linter/refs/heads/main/.golangci.yaml)
+
+  install:
+    desc: "Install all packages"
+    deps:
+      - install:lint
+
+  install:lint:
+    desc: "Install golangci-lint"
+    cmds:
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+    status:
+      - command -v golangci-lint
+
+  migrations-up:
+    desc: "Start migrations for db"
+    cmds:
+      - goose -dir migrations sqlite3 subscriptions.db up
+
+  migrations-down:
+    desc: "Stop migrations for db"
+    cmds:
+      - goose -dir migrations sqlite3 subscriptions.db down
+
+  migrations-status:
+    desc: "Show migration status"
+    cmds:
+      - goose -dir migrations sqlite3 subscriptions.db status
+
+

@@ -43,10 +43,10 @@ func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
 	}
 
 	if e.Host == "" || e.Port == "" || e.User == "" || e.Password == "" {
-		log.Fatal("❌ SMTP credentials are not set properly in .env")
-	} else {
-		log.Println(e.Host, e.Port, e.User, e.Password)
+		log.Panic("❌ SMTP credentials are not set properly in .env")
 	}
+
+	log.Println(e.Host, e.Port, e.User, e.Password)
 
 	auth := smtp.PlainAuth("", e.User, e.Password, e.Host)
 	msg := []byte("From: " + e.From + "\r\n" +

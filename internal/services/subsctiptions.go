@@ -13,7 +13,8 @@ type SubscriptionService struct {
 	Service *EmailService
 }
 
-func NewSubscriptionService(repo *repository.SubscriptionRepository, emailService *EmailService) *SubscriptionService {
+func NewSubscriptionService(repo *repository.SubscriptionRepository,
+	emailService *EmailService) *SubscriptionService {
 	return &SubscriptionService{
 		Repo:    repo,
 		Service: emailService,

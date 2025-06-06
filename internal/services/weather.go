@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,23 +22,30 @@ type WeatherService struct {
 
 const timeoutTime = 10 * time.Second
 
-//func NewWeatherService(apiKey string) *WeatherService {
+// func NewWeatherService(apiKey string) *WeatherService {
 //	return &WeatherService{APIKey: apiKey}
-//}
+// }
 
-func (s *WeatherService) GetWeather(city string) (WeatherData, error) {
+func (s *WeatherService) GetWeather(ctx context.Context, city string) (WeatherData, error) {
 	fmt.Println("Getting weather with API token: ", s.APIKey)
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", s.APIKey, city)
 
 	client := &http.Client{Timeout: timeoutTime}
-	resp, err := client.Get(url)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return WeatherData{}, err
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+
+	resp, err := client.Do(req)
+
+	if err != nil {
+		return WeatherData{}, err
+	}
+	defer func(body io.ReadCloser) {
+		err := body.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 	}(resp.Body)
 

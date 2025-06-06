@@ -39,12 +39,10 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 	}
 	err := h.Service.Subscribe(email, city, frequency)
 	if err != nil {
-		//c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	//c.JSON(http.StatusOK, gin.H{"message": "Subscription successful.", "token": token})
 	c.Writer.WriteHeader(http.StatusOK)
 }
 
