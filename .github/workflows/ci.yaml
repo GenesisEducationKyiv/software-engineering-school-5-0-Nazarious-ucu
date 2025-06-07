@@ -19,12 +19,6 @@ jobs:
         with:
           go-version: '1.24.3'
 
-      - name: Download Go modules
-        run: |
-          go mod tidy
-          go mod download
-          go mod vendor
-
       - name: Install Task
         uses: arduino/setup-task@v2
 
