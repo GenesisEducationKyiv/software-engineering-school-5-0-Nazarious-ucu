@@ -6,12 +6,15 @@ import (
 	"encoding/hex"
 )
 
+const bytesNum = 16
+
 type SubscriptionService struct {
 	Repo    *repository.SubscriptionRepository
 	Service *EmailService
 }
 
-func NewSubscriptionService(repo *repository.SubscriptionRepository, emailService *EmailService) *SubscriptionService {
+func NewSubscriptionService(repo *repository.SubscriptionRepository,
+	emailService *EmailService) *SubscriptionService {
 	return &SubscriptionService{
 		Repo:    repo,
 		Service: emailService,
@@ -19,7 +22,7 @@ func NewSubscriptionService(repo *repository.SubscriptionRepository, emailServic
 }
 
 func (s *SubscriptionService) Subscribe(email, city string, frequency string) error {
-	tokenBytes := make([]byte, 16)
+	tokenBytes := make([]byte, bytesNum)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		return err
 	}
@@ -29,8 +32,6 @@ func (s *SubscriptionService) Subscribe(email, city string, frequency string) er
 		return err
 	}
 
-	//fmt.Printf("Confirmation link: http://localhost:8080/confirm/%s\n", token)
-	//fmt.Printf("Unsubscribe link: http://localhost:8080/unsubscribe/%s\n", token)
 	return s.Service.SendConfirmationEmail(email, token)
 }
 

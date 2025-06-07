@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+    branches: ['*']
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up env
+        uses: ./.github/actions/setup
+        with:
+          go-version: '1.24.3'
+
+      - name: Run Linter
+        run: task lint
+
+
+  migrate-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up env
+        uses: ./.github/actions/setup
+        with:
+          go-version: '1.24.3'
+          install-goose: 'true'
+
+      - name: Run DB migrations
+        run: task migrations-up

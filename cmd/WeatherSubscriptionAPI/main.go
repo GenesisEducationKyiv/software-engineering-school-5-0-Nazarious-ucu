@@ -4,16 +4,17 @@ import (
 	"WeatherSubscriptionAPI/internal/handlers"
 	"WeatherSubscriptionAPI/internal/notifier"
 	"WeatherSubscriptionAPI/internal/repository"
-	"WeatherSubscriptionAPI/internal/services"
+	service "WeatherSubscriptionAPI/internal/services"
 	"database/sql"
+	"log"
+	"os"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"log"
 	_ "modernc.org/sqlite"
-	"os"
 )
 
 // @title Weather Subscription API
@@ -29,20 +30,20 @@ func main() {
 
 	db, err := sql.Open("sqlite", "./subscriptions.db")
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	defer func(db *sql.DB) {
 		err := db.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 	}(db)
 
 	if err := goose.SetDialect("sqlite"); err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	if err := goose.Up(db, "migrations"); err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	r := gin.Default()

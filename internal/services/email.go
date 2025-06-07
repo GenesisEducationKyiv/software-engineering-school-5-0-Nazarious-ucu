@@ -18,13 +18,20 @@ type EmailService struct {
 }
 
 func NewEmailService() *EmailService {
-	return &EmailService{
+	svc := &EmailService{
 		User:     os.Getenv("SMTP_USER"),
 		Host:     os.Getenv("SMTP_HOST"),
 		Port:     os.Getenv("SMTP_PORT"),
 		Password: os.Getenv("SMTP_PASS"),
 		From:     os.Getenv("SMTP_FROM"),
 	}
+
+	if svc.User == "" || svc.Host == "" || svc.Port == "" || svc.Password == "" || svc.From == "" {
+		log.Panicf("SMTP credentials are not fully set: %+v", svc)
+		return nil
+	}
+
+	return svc
 }
 
 func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
@@ -43,10 +50,10 @@ func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
 	}
 
 	if e.Host == "" || e.Port == "" || e.User == "" || e.Password == "" {
-		log.Fatal("❌ SMTP credentials are not set properly in .env")
-	} else {
-		log.Println(e.Host, e.Port, e.User, e.Password)
+		log.Panic("❌ SMTP credentials are invalid")
 	}
+
+	log.Println(e.Host, e.Port, e.User, e.Password)
 
 	auth := smtp.PlainAuth("", e.User, e.Password, e.Host)
 	msg := []byte("From: " + e.From + "\r\n" +
@@ -61,14 +68,14 @@ func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
 	return smtp.SendMail(addr, auth, e.From, []string{toEmail}, msg)
 }
 
-func (s *EmailService) Send(to, subject, body string) error {
-	auth := smtp.PlainAuth("", s.User, s.Password, s.Host)
+func (e *EmailService) Send(to, subject, body string) error {
+	auth := smtp.PlainAuth("", e.User, e.Password, e.Host)
 
-	msg := "From: " + s.From + "\n" +
+	msg := "From: " + e.From + "\n" +
 		"To: " + to + "\n" +
 		"Subject: " + subject + "\n\n" +
 		body
 
-	addr := s.Host + ":" + s.Port
-	return smtp.SendMail(addr, auth, s.User, []string{to}, []byte(msg))
+	addr := e.Host + ":" + e.Port
+	return smtp.SendMail(addr, auth, e.User, []string{to}, []byte(msg))
 }

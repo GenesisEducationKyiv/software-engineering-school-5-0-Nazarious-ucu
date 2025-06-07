@@ -2,9 +2,10 @@ package handlers
 
 import (
 	_ "WeatherSubscriptionAPI/internal/models"
-	"WeatherSubscriptionAPI/internal/services"
-	"github.com/gin-gonic/gin"
+	service "WeatherSubscriptionAPI/internal/services"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type SubscriptionHandler struct {
@@ -38,12 +39,10 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 	}
 	err := h.Service.Subscribe(email, city, frequency)
 	if err != nil {
-		//c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	//c.JSON(http.StatusOK, gin.H{"message": "Subscription successful.", "token": token})
 	c.Writer.WriteHeader(http.StatusOK)
 }
 

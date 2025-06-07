@@ -2,9 +2,13 @@ package repository
 
 import (
 	"database/sql"
-	_ "modernc.org/sqlite"
+	"log"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
+
+const dayHours = 24
 
 type Subscription struct {
 	ID         int
@@ -24,9 +28,10 @@ func NewSubscriptionRepository(db *sql.DB) *SubscriptionRepository {
 
 func (r *SubscriptionRepository) Create(email, city, token string, frequency string) error {
 	_, err := r.DB.Exec(
-		`INSERT INTO subscriptions (email, city, token, confirmed, unsubscribed, created_at, frequency, last_sent)
+		`INSERT INTO subscriptions 
+    				(email, city, token, confirmed, unsubscribed, created_at, frequency, last_sent)
          VALUES (?, ?, ?, 0, 0, ?, ?, null)`,
-		email, city, token, time.Now(),
+		email, city, token, time.Now(), frequency,
 	)
 	return err
 }
@@ -62,7 +67,12 @@ func (r *SubscriptionRepository) GetConfirmedSubscriptions() ([]Subscription, er
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Panic(err)
+		}
+	}(rows)
 
 	var subs []Subscription
 	now := time.Now()
@@ -87,7 +97,7 @@ func (r *SubscriptionRepository) GetConfirmedSubscriptions() ([]Subscription, er
 			case "hourly":
 				shouldSend = now.Sub(*sub.LastSentAt) >= time.Hour
 			case "daily":
-				shouldSend = now.Sub(*sub.LastSentAt) >= 24*time.Hour
+				shouldSend = now.Sub(*sub.LastSentAt) >= dayHours*time.Hour
 			}
 		}
 

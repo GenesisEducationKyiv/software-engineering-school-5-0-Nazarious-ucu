@@ -1,8 +1,11 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -17,22 +20,36 @@ type WeatherService struct {
 	APIKey string
 }
 
-func NewWeatherService(apiKey string) *WeatherService {
-	return &WeatherService{APIKey: apiKey}
-}
+const timeoutTime = 10 * time.Second
 
-func (s *WeatherService) GetWeather(city string) (WeatherData, error) {
+// func NewWeatherService(apiKey string) *WeatherService {
+//	return &WeatherService{APIKey: apiKey}
+// }
+
+func (s *WeatherService) GetWeather(ctx context.Context, city string) (WeatherData, error) {
 	fmt.Println("Getting weather with API token: ", s.APIKey)
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", s.APIKey, city)
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(url)
+	client := &http.Client{Timeout: timeoutTime}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return WeatherData{}, err
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	resp, err := client.Do(req)
+
+	if err != nil {
+		return WeatherData{}, err
+	}
+	defer func(body io.ReadCloser) {
+		err := body.Close()
+		if err != nil {
+			log.Panic(err)
+		}
+	}(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
 		return WeatherData{}, fmt.Errorf("weather API error: status %d", resp.StatusCode)
 	}
 
