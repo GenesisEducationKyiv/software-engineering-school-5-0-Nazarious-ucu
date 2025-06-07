@@ -14,6 +14,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up env
+        uses: ./.github/actions/setup
+        with:
+          go-version: '1.24.3'
+
       - name: Run Linter
         run: task lint
 
@@ -24,6 +29,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up env
+        uses: ./.github/actions/setup
+        with:
+          go-version: '1.24.3'
+          install-goose: 'true'
 
       - name: Run DB migrations
         run: task migrations-up
