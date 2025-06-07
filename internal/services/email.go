@@ -18,13 +18,20 @@ type EmailService struct {
 }
 
 func NewEmailService() *EmailService {
-	return &EmailService{
+	svc := &EmailService{
 		User:     os.Getenv("SMTP_USER"),
 		Host:     os.Getenv("SMTP_HOST"),
 		Port:     os.Getenv("SMTP_PORT"),
 		Password: os.Getenv("SMTP_PASS"),
 		From:     os.Getenv("SMTP_FROM"),
 	}
+
+	if svc.User == "" || svc.Host == "" || svc.Port == "" || svc.Password == "" || svc.From == "" {
+		log.Panicf("SMTP credentials are not fully set: %+v", svc)
+		return nil
+	}
+
+	return svc
 }
 
 func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
@@ -43,7 +50,7 @@ func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
 	}
 
 	if e.Host == "" || e.Port == "" || e.User == "" || e.Password == "" {
-		log.Panic("❌ SMTP credentials are not set properly in .env")
+		log.Panic("❌ SMTP credentials are invalid")
 	}
 
 	log.Println(e.Host, e.Port, e.User, e.Password)

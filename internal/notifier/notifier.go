@@ -64,7 +64,7 @@ func shouldSendUpdate(sub repository.Subscription, now time.Time) bool {
 
 func sendWeatherUpdate(sub repository.Subscription, weatherSvc *service.WeatherService,
 	emailSvc *service.EmailService, repo *repository.SubscriptionRepository) error {
-	ctx := context.Background() // або переданий контекст зверху
+	ctx := context.Background()
 
 	forecast, err := weatherSvc.GetWeather(ctx, sub.City)
 	if err != nil {
