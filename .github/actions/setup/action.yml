@@ -19,7 +19,7 @@ runs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: ${{ inputs.go-version }}
+        go-version: ${{ inputs.go-version-file }}
 
     - name: Install Task
       uses: arduino/setup-task@v2
