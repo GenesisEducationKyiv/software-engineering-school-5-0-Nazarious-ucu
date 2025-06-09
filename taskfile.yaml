@@ -47,16 +47,22 @@ tasks:
 
   migrations-up:
     desc: "Start migrations for db"
+    deps:
+      - install:goose
     cmds:
       - goose -dir migrations sqlite3 subscriptions.db up
 
   migrations-down:
-    desc: "Rollback migration"
+    desc: "Rollback migrationa"
+    deps:
+      - install:goose
     cmds:
       - goose -dir migrations sqlite3 subscriptions.db down
 
   migrations-status:
     desc: "Show migration status"
+    deps:
+      - install:goose
     cmds:
       - goose -dir migrations sqlite3 subscriptions.db status
 
