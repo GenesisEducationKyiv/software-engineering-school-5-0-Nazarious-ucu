@@ -3,8 +3,6 @@ name: CI
 on:
   push:
     branches: ['*']
-  pull_request:
-    branches: ['*']
 
 jobs:
   lint:
@@ -17,7 +15,7 @@ jobs:
       - name: Set up env
         uses: ./.github/actions/setup
         with:
-          go-version: '1.24.3'
+          go-version-file: 'go.mod'
 
       - name: Run Linter
         run: task lint
@@ -33,7 +31,7 @@ jobs:
       - name: Set up env
         uses: ./.github/actions/setup
         with:
-          go-version: '1.24.3'
+          go-version-file: 'go.mod'
           install-goose: 'true'
 
       - name: Run DB migrations

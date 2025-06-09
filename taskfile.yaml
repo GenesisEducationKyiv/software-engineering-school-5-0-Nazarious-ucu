@@ -5,10 +5,6 @@ dotenv:
   - .env
 
 tasks:
-  default:
-    desc: "Show available tasks"
-    cmds:
-      - task --list-all
 
   run:
     desc: "Run service"
@@ -20,8 +16,6 @@ tasks:
     cmds:
       - docker-compose down
 
-  clear:
-    desc: "Clear all"
 
   lint:
     desc: "Run golangci-lint"
@@ -43,6 +37,13 @@ tasks:
       - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
     status:
       - command -v golangci-lint
+  install:goose:
+    desc: "Install goose"
+    cmds:
+      - go install github.com/pressly/goose/v3/cmd/goose@latest
+    status:
+      - command -v goose
+
 
   migrations-up:
     desc: "Start migrations for db"
@@ -50,7 +51,7 @@ tasks:
       - goose -dir migrations sqlite3 subscriptions.db up
 
   migrations-down:
-    desc: "Stop migrations for db"
+    desc: "Rollback migration"
     cmds:
       - goose -dir migrations sqlite3 subscriptions.db down
 

@@ -3,13 +3,13 @@ author: nazar
 description: setup
 
 inputs:
-  go-version:
+  go-version-file:
     description: "Go version to install"
     default: "go.mod"
     required: false
 
   install-goose:
-    description: "Go version to install"
+    description: "Option to install goose or not"
     default: "false"
     required: false
 
