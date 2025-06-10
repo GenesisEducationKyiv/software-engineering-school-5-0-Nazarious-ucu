@@ -45,22 +45,22 @@
 
 1. Створи `.env` файл у корені:
 
-```
-WEATHER_API_KEY=your_weatherapi_key
-SMTP_USER=verified_user
-SMTP_PASS=your_smtp_password
-SMTP_HOST=smtp.sendgrid.net
-SMTP_PORT=587
-SMTP_FROM=verified_sender@example.com
-```
-
-Потрібно зареєстуватись на 
+    ```
+    WEATHER_API_KEY=your_weatherapi_key
+    SMTP_USER=verified_user
+    SMTP_PASS=your_smtp_password
+    SMTP_HOST=smtp.sendgrid.net
+    SMTP_PORT=587
+    SMTP_FROM=verified_sender@example.com
+    ```
+    
+    Потрібно зареєструватись на 
 
 2. Запуск проєкту:
-
-```bash
-docker-compose up --build
-```
+    
+    ```bash
+    docker-compose up --build
+    ```
 
 3. Перевірка:
 * Swagger: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
