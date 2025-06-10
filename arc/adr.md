@@ -1,6 +1,7 @@
 # ADR-001: Вибір бази даних для зберігання підписок
 
 Created by: Назар Парносов
+Status: Accepted 
 Created time: June 9, 2025 12:01 AM
 
 ## Контекст

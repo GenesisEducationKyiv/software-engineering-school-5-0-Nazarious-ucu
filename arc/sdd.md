@@ -26,8 +26,6 @@ Created by: Назар Парносов
 
    ![user.png](user.png)
 
-   please write a short description of that userflow
-
     - Користувач викликає один із ендпоінтів підписки (`/api/subscribe`, `/api/confirm`, `/api/unsubscribe`) або прямий запит погоди (`/api/weather`).
     - Запит потрапляє в шар **Services**, де відпрацьовується бізнес-логіка: створення/підтвердження/скасування підписки або отримання поточних даних погоди з зовнішнього API.
     - **Services** зберігає чи читає інформацію (email, місто, токен, статуси, `last_sent`, `frequency`) у **SQLite**.
