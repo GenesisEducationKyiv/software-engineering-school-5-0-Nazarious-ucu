@@ -1,9 +1,11 @@
 package handlers
 
 import (
-	"WeatherSubscriptionAPI/internal/services"
-	"github.com/gin-gonic/gin"
+	service "WeatherSubscriptionAPI/internal/services"
+	"context"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type WeatherHandler struct {
@@ -31,7 +33,9 @@ func (h *WeatherHandler) GetWeather(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "city query parameter is required"})
 		return
 	}
-	data, err := h.Service.GetWeather(city)
+	ctx := context.Background() // або переданий контекст зверху
+
+	data, err := h.Service.GetWeather(ctx, city)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

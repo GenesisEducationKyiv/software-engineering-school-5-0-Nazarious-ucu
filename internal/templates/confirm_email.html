@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Confirm Your Subscription</title>
@@ -8,6 +8,7 @@
     <h2>Hello, {{.Email}}</h2>
     <p>Thank you for subscribing to our weather updates.</p>
     <p>Please confirm your subscription by clicking the link below:</p>
-    <p><a href="{{.Link}}">{{.Link}}</a></p>
+    <p><!--suppress HtmlUnknownTarget -->
+        <a href="{{.Link}}">{{.Link}}</a></p>
 </body>
 </html>
