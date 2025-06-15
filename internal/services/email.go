@@ -27,7 +27,7 @@ func NewEmailService(cfg config.Config) *EmailService {
 	}
 
 	if svc.User == "" || svc.Host == "" || svc.Port == "" || svc.Password == "" || svc.From == "" {
-		log.Panicf("SMTP credentials are not fully set: %+v", svc)
+		log.Printf("SMTP credentials are not fully set: %+v\n", svc)
 		return nil
 	}
 
@@ -50,7 +50,7 @@ func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
 	}
 
 	if e.Host == "" || e.Port == "" || e.User == "" || e.Password == "" {
-		log.Panic("❌ SMTP credentials are invalid")
+		log.Println("SMTP credentials are invalid")
 	}
 
 	log.Println(e.Host, e.Port, e.User, e.Password)
