@@ -2,8 +2,9 @@ package handlers
 
 import (
 	"context"
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 	"net/http"
+
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 
 	"github.com/gin-gonic/gin"
 )

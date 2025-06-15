@@ -37,7 +37,6 @@ func (s *WeatherService) GetWeather(ctx context.Context, city string) (WeatherDa
 	}
 
 	resp, err := s.client.Do(req)
-
 	if err != nil {
 		return WeatherData{}, err
 	}

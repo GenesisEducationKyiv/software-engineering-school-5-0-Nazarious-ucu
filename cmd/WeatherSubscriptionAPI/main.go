@@ -2,11 +2,13 @@ package main
 
 import (
 	"database/sql"
+	"log"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
 	"github.com/gin-gonic/gin"
 	"github.com/pressly/goose/v3"
-	"log"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -21,7 +23,6 @@ func createSqliteDb() (*sql.DB, error) {
 	}
 
 	return db, nil
-
 }
 
 func initDB(db *sql.DB) error {

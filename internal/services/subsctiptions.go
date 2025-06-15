@@ -24,7 +24,8 @@ type SubscriptionService struct {
 }
 
 func NewSubscriptionService(repo SubscriptionRepository,
-	emailService Emailer) *SubscriptionService {
+	emailService Emailer,
+) *SubscriptionService {
 	return &SubscriptionService{
 		Repo:    repo,
 		Service: emailService,

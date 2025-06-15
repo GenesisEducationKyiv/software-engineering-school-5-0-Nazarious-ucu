@@ -2,12 +2,13 @@ package notifier
 
 import (
 	"context"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 )
 
 const (
@@ -28,7 +29,8 @@ type Notifier struct {
 	EmailService   service.Emailer
 }
 
-func NewNotifier(repo SubscriptionRepositor, weatherService handlers.WeatherServicer, emailService service.Emailer) *Notifier {
+func NewNotifier(repo SubscriptionRepositor,
+	weatherService handlers.WeatherServicer, emailService service.Emailer) *Notifier {
 	return &Notifier{
 		Repo:           repo,
 		WeatherService: weatherService,
@@ -51,7 +53,6 @@ func (n *Notifier) StartWeatherNotifier() {
 			for _, sub := range subs {
 				if n.shouldSendUpdate(sub, now) {
 					err := n.sendWeatherUpdate(sub)
-
 					if err != nil {
 						log.Println("DB query error:", err)
 					}

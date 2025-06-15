@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 type Config struct {
 	WeatherAPIKey string
@@ -12,11 +15,16 @@ type Config struct {
 	From     string
 
 	Server struct {
-		Address string
+		Address     string
+		ReadTimeout int
 	}
 }
 
 func NewConfig() *Config {
+	timeout, err := strconv.Atoi(os.Getenv("SERVER_TIMEOUT"))
+	if err != nil {
+		timeout = 10
+	}
 	return &Config{
 		WeatherAPIKey: os.Getenv("WEATHER_API_KEY"),
 
@@ -27,9 +35,11 @@ func NewConfig() *Config {
 		From:     os.Getenv("EMAIL_FROM"),
 
 		Server: struct {
-			Address string
+			Address     string
+			ReadTimeout int
 		}{
-			Address: os.Getenv("SERVER_ADDRESS"),
+			Address:     os.Getenv("SERVER_ADDRESS"),
+			ReadTimeout: timeout, // Default read timeout in seconds
 		},
 	}
 }

@@ -3,6 +3,10 @@ package app
 import (
 	"database/sql"
 	"errors"
+	"log"
+	"net/http"
+	"time"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
@@ -11,8 +15,6 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"log"
-	"net/http"
 )
 
 type App struct {
@@ -36,8 +38,9 @@ func (a *App) Init() error {
 	a.log.Println("Initializing application with configuration:", a.cfg)
 
 	a.srv = &http.Server{
-		Addr:    a.cfg.Server.Address,
-		Handler: a.router,
+		Addr:        a.cfg.Server.Address,
+		Handler:     a.router,
+		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout),
 	}
 	repo := repository.NewSubscriptionRepository(a.db)
 	emailService := service.NewEmailService(a.cfg)

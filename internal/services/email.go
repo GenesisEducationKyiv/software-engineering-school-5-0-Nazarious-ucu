@@ -3,10 +3,11 @@ package service
 import (
 	"bytes"
 	"fmt"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
 	"html/template"
 	"log"
 	"net/smtp"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
 )
 
 type EmailService struct {
