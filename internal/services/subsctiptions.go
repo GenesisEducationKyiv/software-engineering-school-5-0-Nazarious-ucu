@@ -1,20 +1,30 @@
 package service
 
 import (
-	"WeatherSubscriptionAPI/internal/repository"
 	"crypto/rand"
 	"encoding/hex"
 )
 
 const bytesNum = 16
 
-type SubscriptionService struct {
-	Repo    *repository.SubscriptionRepository
-	Service *EmailService
+type Emailer interface {
+	SendConfirmationEmail(email, token string) error
+	Send(to, subject, body string) error
 }
 
-func NewSubscriptionService(repo *repository.SubscriptionRepository,
-	emailService *EmailService) *SubscriptionService {
+type SubscriptionRepository interface {
+	Create(email, city, token, frequency string) error
+	Confirm(token string) (bool, error)
+	Unsubscribe(token string) (bool, error)
+}
+
+type SubscriptionService struct {
+	Repo    SubscriptionRepository
+	Service Emailer
+}
+
+func NewSubscriptionService(repo SubscriptionRepository,
+	emailService Emailer) *SubscriptionService {
 	return &SubscriptionService{
 		Repo:    repo,
 		Service: emailService,

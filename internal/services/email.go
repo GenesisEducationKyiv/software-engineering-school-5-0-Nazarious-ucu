@@ -3,10 +3,10 @@ package service
 import (
 	"bytes"
 	"fmt"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
 	"html/template"
 	"log"
 	"net/smtp"
-	"os"
 )
 
 type EmailService struct {
@@ -17,13 +17,13 @@ type EmailService struct {
 	From     string
 }
 
-func NewEmailService() *EmailService {
+func NewEmailService(cfg config.Config) *EmailService {
 	svc := &EmailService{
-		User:     os.Getenv("SMTP_USER"),
-		Host:     os.Getenv("SMTP_HOST"),
-		Port:     os.Getenv("SMTP_PORT"),
-		Password: os.Getenv("SMTP_PASS"),
-		From:     os.Getenv("SMTP_FROM"),
+		User:     cfg.User,
+		Host:     cfg.Host,
+		Port:     cfg.Port,
+		Password: cfg.Password,
+		From:     cfg.From,
 	}
 
 	if svc.User == "" || svc.Host == "" || svc.Port == "" || svc.Password == "" || svc.From == "" {

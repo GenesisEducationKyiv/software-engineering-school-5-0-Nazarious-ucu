@@ -1,18 +1,22 @@
 package handlers
 
 import (
-	service "WeatherSubscriptionAPI/internal/services"
 	"context"
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type WeatherHandler struct {
-	Service *service.WeatherService
+type WeatherServicer interface {
+	GetWeather(ctx context.Context, city string) (service.WeatherData, error)
 }
 
-func NewWeatherHandler(svc *service.WeatherService) *WeatherHandler {
+type WeatherHandler struct {
+	Service WeatherServicer
+}
+
+func NewWeatherHandler(svc WeatherServicer) *WeatherHandler {
 	return &WeatherHandler{Service: svc}
 }
 
