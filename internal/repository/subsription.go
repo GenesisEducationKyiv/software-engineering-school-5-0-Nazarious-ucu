@@ -70,7 +70,7 @@ func (r *SubscriptionRepository) GetConfirmedSubscriptions() ([]Subscription, er
 	defer func(rows *sql.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Panic(err)
+			log.Println(err)
 		}
 	}(rows)
 

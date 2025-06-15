@@ -6,7 +6,8 @@ import (
 	"html/template"
 	"log"
 	"net/smtp"
-	"os"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
 )
 
 type EmailService struct {
@@ -17,17 +18,17 @@ type EmailService struct {
 	From     string
 }
 
-func NewEmailService() *EmailService {
+func NewEmailService(cfg config.Config) *EmailService {
 	svc := &EmailService{
-		User:     os.Getenv("SMTP_USER"),
-		Host:     os.Getenv("SMTP_HOST"),
-		Port:     os.Getenv("SMTP_PORT"),
-		Password: os.Getenv("SMTP_PASS"),
-		From:     os.Getenv("SMTP_FROM"),
+		User:     cfg.User,
+		Host:     cfg.Host,
+		Port:     cfg.Port,
+		Password: cfg.Password,
+		From:     cfg.From,
 	}
 
 	if svc.User == "" || svc.Host == "" || svc.Port == "" || svc.Password == "" || svc.From == "" {
-		log.Panicf("SMTP credentials are not fully set: %+v", svc)
+		log.Printf("SMTP credentials are not fully set: %+v\n", svc)
 		return nil
 	}
 
@@ -50,7 +51,7 @@ func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
 	}
 
 	if e.Host == "" || e.Port == "" || e.User == "" || e.Password == "" {
-		log.Panic("❌ SMTP credentials are invalid")
+		log.Println("SMTP credentials are invalid")
 	}
 
 	log.Println(e.Host, e.Port, e.User, e.Password)
