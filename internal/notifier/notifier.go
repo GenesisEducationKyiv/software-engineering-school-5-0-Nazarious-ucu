@@ -2,13 +2,12 @@ package notifier
 
 import (
 	"context"
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 )
 
 const (
@@ -23,14 +22,18 @@ type SubscriptionRepositor interface {
 	UpdateLastSent(subscriptionID int) error
 }
 
+type EmailSender interface {
+	SendWeather(to, city string, forecast service.WeatherData) error
+}
+
 type Notifier struct {
 	Repo           SubscriptionRepositor
 	WeatherService handlers.WeatherServicer
-	EmailService   service.Emailer
+	EmailService   EmailSender
 }
 
 func NewNotifier(repo SubscriptionRepositor,
-	weatherService handlers.WeatherServicer, emailService service.Emailer) *Notifier {
+	weatherService handlers.WeatherServicer, emailService EmailSender) *Notifier {
 	return &Notifier{
 		Repo:           repo,
 		WeatherService: weatherService,
@@ -91,12 +94,7 @@ func (n *Notifier) sendWeatherUpdate(sub repository.Subscription) error {
 		return err
 	}
 
-	temp := strconv.FormatFloat(forecast.Temperature, 'f', 1, 64)
-	body := "Weather update for " + sub.City + ":\n" +
-		"Temperature: " + temp + "°C\n" +
-		"Condition: " + forecast.Condition
-
-	if err := n.EmailService.Send(sub.Email, "Your weather update", body); err != nil {
+	if err := n.EmailService.SendWeather(sub.Email, sub.City, forecast); err != nil {
 		log.Println("Email error:", err)
 		return err
 	}

@@ -4,35 +4,21 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"log"
-	"net/smtp"
-
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
+	"strconv"
 )
 
-type EmailService struct {
-	User     string
-	Host     string
-	Port     string
-	Password string
-	From     string
+type Emailer interface {
+	Send(to, subject, additionalHeaders, body string) error
 }
 
-func NewEmailService(cfg config.Config) *EmailService {
-	svc := &EmailService{
-		User:     cfg.User,
-		Host:     cfg.Host,
-		Port:     cfg.Port,
-		Password: cfg.Password,
-		From:     cfg.From,
-	}
+type EmailService struct {
+	emailer Emailer
+}
 
-	if svc.User == "" || svc.Host == "" || svc.Port == "" || svc.Password == "" || svc.From == "" {
-		log.Printf("SMTP credentials are not fully set: %+v\n", svc)
-		return nil
+func NewEmailService(service Emailer) *EmailService {
+	return &EmailService{
+		emailer: service,
 	}
-
-	return svc
 }
 
 func (e *EmailService) SendConfirmation(toEmail, token string) error {
@@ -50,33 +36,18 @@ func (e *EmailService) SendConfirmation(toEmail, token string) error {
 		return err
 	}
 
-	if e.Host == "" || e.Port == "" || e.User == "" || e.Password == "" {
-		log.Println("SMTP credentials are invalid")
-	}
-
-	log.Println(e.Host, e.Port, e.User, e.Password)
-
-	auth := smtp.PlainAuth("", e.User, e.Password, e.Host)
-	msg := []byte("From: " + e.From + "\r\n" +
-		"To: " + toEmail + "\r\n" +
-		"Subject: Confirm Your Weather Subscription\r\n" +
-		"MIME-Version: 1.0\r\n" +
-		"Content-Type: text/html; charset=\"UTF-8\"\r\n" +
-		"\r\n" +
+	return e.emailer.Send(toEmail,
+		"Confirm Your Weather Subscription",
+		"MIME-Version: 1.0\r\nContent-Type: text/html; charset=\"UTF-8\"",
 		body.String())
-
-	addr := fmt.Sprintf("%s:%s", e.Host, e.Port)
-	return smtp.SendMail(addr, auth, e.From, []string{toEmail}, msg)
 }
 
-func (e *EmailService) Send(to, subject, body string) error {
-	auth := smtp.PlainAuth("", e.User, e.Password, e.Host)
+func (e *EmailService) SendWeather(toEmail, city string, forecast WeatherData) error {
 
-	msg := "From: " + e.From + "\n" +
-		"To: " + to + "\n" +
-		"Subject: " + subject + "\n\n" +
-		body
+	temp := strconv.FormatFloat(forecast.Temperature, 'f', 1, 64)
+	body := "Weather update for " + city + ":\n" +
+		"Temperature: " + temp + "°C\n" +
+		"Condition: " + forecast.Condition
 
-	addr := e.Host + ":" + e.Port
-	return smtp.SendMail(addr, auth, e.User, []string{to}, []byte(msg))
+	return e.emailer.Send(toEmail, "Your Daily Weather Update", "", body)
 }

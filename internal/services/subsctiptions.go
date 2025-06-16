@@ -7,9 +7,8 @@ import (
 
 const bytesNum = 16
 
-type Emailer interface {
+type ConfirmationEmailer interface {
 	SendConfirmation(email, token string) error
-	Send(to, subject, body string) error
 }
 
 type SubscriptionRepository interface {
@@ -20,11 +19,11 @@ type SubscriptionRepository interface {
 
 type SubscriptionService struct {
 	Repo    SubscriptionRepository
-	Service Emailer
+	Service ConfirmationEmailer
 }
 
 func NewSubscriptionService(repo SubscriptionRepository,
-	emailService Emailer,
+	emailService ConfirmationEmailer,
 ) *SubscriptionService {
 	return &SubscriptionService{
 		Repo:    repo,
