@@ -43,7 +43,6 @@ func (e *EmailService) SendConfirmation(toEmail, token string) error {
 }
 
 func (e *EmailService) SendWeather(toEmail, city string, forecast WeatherData) error {
-
 	temp := strconv.FormatFloat(forecast.Temperature, 'f', 1, 64)
 	body := "Weather update for " + city + ":\n" +
 		"Temperature: " + temp + "°C\n" +

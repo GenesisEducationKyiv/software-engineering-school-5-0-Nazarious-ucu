@@ -2,12 +2,12 @@ package notifier
 
 import (
 	"context"
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 	"log"
 	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 )
 
 const (

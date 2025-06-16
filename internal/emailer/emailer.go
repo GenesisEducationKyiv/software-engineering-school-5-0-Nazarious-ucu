@@ -32,7 +32,6 @@ func NewSMTPService(cfg *config.Config) *SMTPService {
 }
 
 func (e *SMTPService) Send(to, subject, additionalHeaders, body string) error {
-
 	if e.Host == "" || e.Port == "" || e.User == "" || e.Password == "" {
 		log.Println("SMTP credentials are invalid")
 	}
