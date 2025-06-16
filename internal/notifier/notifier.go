@@ -19,7 +19,7 @@ const (
 )
 
 type SubscriptionRepositor interface {
-	GetConfirmedSubscriptions() ([]repository.Subscription, error)
+	GetConfirmed() ([]repository.Subscription, error)
 	UpdateLastSent(subscriptionID int) error
 }
 
@@ -42,7 +42,7 @@ func (n *Notifier) StartWeatherNotifier() {
 	go func() {
 		for {
 			log.Println("Checking for subscriptions to send weather updates")
-			subs, err := n.Repo.GetConfirmedSubscriptions()
+			subs, err := n.Repo.GetConfirmed()
 			if err != nil {
 				log.Println("DB query error:", err)
 				time.Sleep(time.Minute)
@@ -85,7 +85,7 @@ func (n *Notifier) shouldSendUpdate(sub repository.Subscription, now time.Time) 
 func (n *Notifier) sendWeatherUpdate(sub repository.Subscription) error {
 	ctx := context.Background()
 
-	forecast, err := n.WeatherService.GetWeather(ctx, sub.City)
+	forecast, err := n.WeatherService.GetByCity(ctx, sub.City)
 	if err != nil {
 		log.Println("Weather fetch error for", sub.City, ":", err)
 		return err

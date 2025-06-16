@@ -10,7 +10,7 @@ import (
 )
 
 type WeatherServicer interface {
-	GetWeather(ctx context.Context, city string) (service.WeatherData, error)
+	GetByCity(ctx context.Context, city string) (service.WeatherData, error)
 }
 
 type WeatherHandler struct {
@@ -38,9 +38,9 @@ func (h *WeatherHandler) GetWeather(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "city query parameter is required"})
 		return
 	}
-	ctx := context.Background() // або переданий контекст зверху
+	ctx := context.Background()
 
-	data, err := h.Service.GetWeather(ctx, city)
+	data, err := h.Service.GetByCity(ctx, city)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

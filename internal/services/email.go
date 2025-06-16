@@ -35,7 +35,7 @@ func NewEmailService(cfg config.Config) *EmailService {
 	return svc
 }
 
-func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
+func (e *EmailService) SendConfirmation(toEmail, token string) error {
 	tmpl, err := template.ParseFiles("internal/templates/confirm_email.html")
 	if err != nil {
 		return err

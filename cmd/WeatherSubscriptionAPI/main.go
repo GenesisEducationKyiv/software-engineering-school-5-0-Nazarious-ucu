@@ -25,7 +25,7 @@ func createSqliteDb() (*sql.DB, error) {
 	return db, nil
 }
 
-func initDB(db *sql.DB) error {
+func initSqliteDb(db *sql.DB) error {
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func main() {
 		log.Panic(err)
 	}
 
-	if err := initDB(db); err != nil {
+	if err := initSqliteDb(db); err != nil {
 		log.Panic(err)
 	}
 	cfg := config.NewConfig()

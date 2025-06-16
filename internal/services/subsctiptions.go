@@ -8,7 +8,7 @@ import (
 const bytesNum = 16
 
 type Emailer interface {
-	SendConfirmationEmail(email, token string) error
+	SendConfirmation(email, token string) error
 	Send(to, subject, body string) error
 }
 
@@ -43,7 +43,7 @@ func (s *SubscriptionService) Subscribe(email, city string, frequency string) er
 		return err
 	}
 
-	return s.Service.SendConfirmationEmail(email, token)
+	return s.Service.SendConfirmation(email, token)
 }
 
 func (s *SubscriptionService) Confirm(token string) (bool, error) {

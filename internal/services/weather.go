@@ -27,7 +27,7 @@ func NewWeatherService(apiKey string) *WeatherService {
 	return &WeatherService{APIKey: apiKey, client: &http.Client{Timeout: timeoutTime}}
 }
 
-func (s *WeatherService) GetWeather(ctx context.Context, city string) (WeatherData, error) {
+func (s *WeatherService) GetByCity(ctx context.Context, city string) (WeatherData, error) {
 	fmt.Println("Getting weather with API token: ", s.APIKey)
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", s.APIKey, city)
 

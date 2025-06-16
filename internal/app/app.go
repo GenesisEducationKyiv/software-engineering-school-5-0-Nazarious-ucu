@@ -42,15 +42,15 @@ func (a *App) Init() error {
 		Handler:     a.router,
 		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout),
 	}
-	repo := repository.NewSubscriptionRepository(a.db)
+	subscriptionRepository := repository.NewSubscriptionRepository(a.db)
 	emailService := service.NewEmailService(a.cfg)
-	subService := service.NewSubscriptionService(repo, emailService)
+	subService := service.NewSubscriptionService(subscriptionRepository, emailService)
 	weatherService := service.NewWeatherService(a.cfg.WeatherAPIKey)
 
 	subHandler := handlers.NewSubscriptionHandler(subService)
 	weatherHandler := handlers.NewWeatherHandler(weatherService)
 
-	notificator := notifier.NewNotifier(repo, weatherService, emailService)
+	notificator := notifier.NewNotifier(subscriptionRepository, weatherService, emailService)
 
 	api := a.router.Group("/api")
 	{
