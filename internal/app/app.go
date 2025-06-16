@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/emailer"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
@@ -43,7 +44,8 @@ func (a *App) Init() error {
 		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout),
 	}
 	subscriptionRepository := repository.NewSubscriptionRepository(a.db)
-	emailService := service.NewEmailService(a.cfg)
+	smtpMailer := emailer.NewSMTPService(&a.cfg)
+	emailService := service.NewEmailService(smtpMailer)
 	subService := service.NewSubscriptionService(subscriptionRepository, emailService)
 	weatherService := service.NewWeatherService(a.cfg.WeatherAPIKey)
 
