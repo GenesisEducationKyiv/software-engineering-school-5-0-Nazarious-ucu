@@ -1,4 +1,4 @@
-package handlers
+package subscription
 
 import (
 	"net/http"
@@ -8,17 +8,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Subscriber interface {
+type subscriber interface {
 	Subscribe(email, city, frequency string) error
 	Confirm(token string) (bool, error)
 	Unsubscribe(token string) (bool, error)
 }
 
 type SubscriptionHandler struct {
-	Service Subscriber
+	Service subscriber
 }
 
-func NewSubscriptionHandler(svc Subscriber) *SubscriptionHandler {
+func NewSubscriptionHandler(svc subscriber) *SubscriptionHandler {
 	return &SubscriptionHandler{Service: svc}
 }
 

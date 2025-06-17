@@ -5,6 +5,11 @@ import (
 	"strconv"
 )
 
+type Server struct {
+	Address     string
+	ReadTimeout int
+}
+
 type Config struct {
 	WeatherAPIKey string
 
@@ -14,10 +19,7 @@ type Config struct {
 	Password string
 	From     string
 
-	Server struct {
-		Address     string
-		ReadTimeout int
-	}
+	Server Server
 }
 
 func NewConfig() *Config {
@@ -34,10 +36,7 @@ func NewConfig() *Config {
 		Password: os.Getenv("EMAIL_PASSWORD"),
 		From:     os.Getenv("EMAIL_FROM"),
 
-		Server: struct {
-			Address     string
-			ReadTimeout int
-		}{
+		Server: Server{
 			Address:     os.Getenv("SERVER_ADDRESS"),
 			ReadTimeout: timeout, // Default read timeout in seconds
 		},

@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 	sleepTime  = 5 * time.Minute
 )
 
-type SubscriptionRepositor interface {
+type SubscriptionRepository interface {
 	GetConfirmed() ([]repository.Subscription, error)
 	UpdateLastSent(subscriptionID int) error
 }
@@ -27,13 +27,13 @@ type EmailSender interface {
 }
 
 type Notifier struct {
-	Repo           SubscriptionRepositor
-	WeatherService handlers.WeatherServicer
+	Repo           SubscriptionRepository
+	WeatherService weather.WeatherServicer
 	EmailService   EmailSender
 }
 
-func NewNotifier(repo SubscriptionRepositor,
-	weatherService handlers.WeatherServicer, emailService EmailSender) *Notifier {
+func New(repo SubscriptionRepository,
+	weatherService weather.WeatherServicer, emailService EmailSender) *Notifier {
 	return &Notifier{
 		Repo:           repo,
 		WeatherService: weatherService,
