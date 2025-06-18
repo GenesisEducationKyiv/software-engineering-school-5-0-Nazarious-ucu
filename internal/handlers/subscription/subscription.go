@@ -18,7 +18,7 @@ type SubscriptionHandler struct {
 	Service subscriber
 }
 
-func NewSubscriptionHandler(svc subscriber) *SubscriptionHandler {
+func NewHandler(svc subscriber) *SubscriptionHandler {
 	return &SubscriptionHandler{Service: svc}
 }
 

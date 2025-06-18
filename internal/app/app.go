@@ -90,7 +90,7 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 		}
 	}()
 
-	subHandler := subscription.NewSubscriptionHandler(srvContainer.subscriptionService)
+	subHandler := subscription.NewHandler(srvContainer.subscriptionService)
 	weatherHandler := weather.NewHandler(srvContainer.weatherService)
 
 	notificator := notifier.New(&srvContainer.subRepository, srvContainer.weatherService, srvContainer.emailService)

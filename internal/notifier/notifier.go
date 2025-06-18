@@ -54,8 +54,8 @@ func (n *Notifier) StartWeatherNotifier() {
 
 			now := time.Now()
 			for _, sub := range subs {
-				if n.shouldSendUpdate(sub, now) {
-					err := n.sendWeatherUpdate(sub)
+				if n.ShouldSendUpdate(sub, now) {
+					err := n.SendWeatherUpdate(sub)
 					if err != nil {
 						log.Println("DB query error:", err)
 					}
@@ -67,7 +67,7 @@ func (n *Notifier) StartWeatherNotifier() {
 	}()
 }
 
-func (n *Notifier) shouldSendUpdate(sub repository.Subscription, now time.Time) bool {
+func (n *Notifier) ShouldSendUpdate(sub repository.Subscription, now time.Time) bool {
 	if sub.LastSentAt == nil {
 		return true
 	}
@@ -85,7 +85,7 @@ func (n *Notifier) shouldSendUpdate(sub repository.Subscription, now time.Time) 
 	return now.After(nextTime)
 }
 
-func (n *Notifier) sendWeatherUpdate(sub repository.Subscription) error {
+func (n *Notifier) SendWeatherUpdate(sub repository.Subscription) error {
 	ctx := context.Background()
 
 	forecast, err := n.WeatherService.GetByCity(ctx, sub.City)
