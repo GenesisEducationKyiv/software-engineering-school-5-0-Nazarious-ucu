@@ -1,19 +1,23 @@
-package handlers
+package weather
 
 import (
-	service "WeatherSubscriptionAPI/internal/services"
 	"context"
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type WeatherHandler struct {
-	Service *service.WeatherService
+type WeatherServicer interface {
+	GetByCity(ctx context.Context, city string) (service.WeatherData, error)
 }
 
-func NewWeatherHandler(svc *service.WeatherService) *WeatherHandler {
-	return &WeatherHandler{Service: svc}
+type Handler struct {
+	Service WeatherServicer
+}
+
+func NewHandler(svc WeatherServicer) *Handler {
+	return &Handler{Service: svc}
 }
 
 // GetWeather
@@ -27,15 +31,15 @@ func NewWeatherHandler(svc *service.WeatherService) *WeatherHandler {
 // @Failure 400
 // @Failure 500
 // @Router /weather [get]
-func (h *WeatherHandler) GetWeather(c *gin.Context) {
+func (h *Handler) GetWeather(c *gin.Context) {
 	city := c.Query("city")
 	if city == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "city query parameter is required"})
 		return
 	}
-	ctx := context.Background() // або переданий контекст зверху
+	ctx := context.Background()
 
-	data, err := h.Service.GetWeather(ctx, city)
+	data, err := h.Service.GetByCity(ctx, city)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

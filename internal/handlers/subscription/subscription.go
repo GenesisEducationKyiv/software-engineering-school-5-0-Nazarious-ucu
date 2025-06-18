@@ -1,18 +1,24 @@
-package handlers
+package subscription
 
 import (
-	_ "WeatherSubscriptionAPI/internal/models"
-	service "WeatherSubscriptionAPI/internal/services"
 	"net/http"
+
+	_ "github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-type SubscriptionHandler struct {
-	Service *service.SubscriptionService
+type subscriber interface {
+	Subscribe(email, city, frequency string) error
+	Confirm(token string) (bool, error)
+	Unsubscribe(token string) (bool, error)
 }
 
-func NewSubscriptionHandler(svc *service.SubscriptionService) *SubscriptionHandler {
+type SubscriptionHandler struct {
+	Service subscriber
+}
+
+func NewSubscriptionHandler(svc subscriber) *SubscriptionHandler {
 	return &SubscriptionHandler{Service: svc}
 }
 
@@ -33,17 +39,17 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 	email := c.PostForm("email")
 	city := c.PostForm("city")
 	frequency := c.PostForm("frequency")
-	if email == "" || city == "" {
-		c.Writer.WriteHeader(http.StatusBadRequest)
+	if email == "" || city == "" || frequency == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required fields"})
 		return
 	}
 	err := h.Service.Subscribe(email, city, frequency)
 	if err != nil {
-		c.Writer.WriteHeader(http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
-	c.Writer.WriteHeader(http.StatusOK)
+	c.JSON(http.StatusOK, gin.H{"message": "Subscribed successfully"})
 }
 
 // Confirm

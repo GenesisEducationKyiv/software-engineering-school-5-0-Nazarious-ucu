@@ -58,7 +58,7 @@ func (r *SubscriptionRepository) Unsubscribe(token string) (bool, error) {
 	return count > 0, err
 }
 
-func (r *SubscriptionRepository) GetConfirmedSubscriptions() ([]Subscription, error) {
+func (r *SubscriptionRepository) GetConfirmed() ([]Subscription, error) {
 	rows, err := r.DB.Query(`
 		SELECT id, email, city, frequency, last_sent
 		FROM subscriptions
@@ -70,7 +70,7 @@ func (r *SubscriptionRepository) GetConfirmedSubscriptions() ([]Subscription, er
 	defer func(rows *sql.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Panic(err)
+			log.Println(err)
 		}
 	}(rows)
 

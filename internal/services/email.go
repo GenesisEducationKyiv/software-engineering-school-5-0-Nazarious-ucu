@@ -4,37 +4,24 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"log"
-	"net/smtp"
-	"os"
+	"strconv"
 )
 
+type Emailer interface {
+	Send(to, subject, additionalHeaders, body string) error
+}
+
 type EmailService struct {
-	User     string
-	Host     string
-	Port     string
-	Password string
-	From     string
+	emailer Emailer
 }
 
-func NewEmailService() *EmailService {
-	svc := &EmailService{
-		User:     os.Getenv("SMTP_USER"),
-		Host:     os.Getenv("SMTP_HOST"),
-		Port:     os.Getenv("SMTP_PORT"),
-		Password: os.Getenv("SMTP_PASS"),
-		From:     os.Getenv("SMTP_FROM"),
+func NewEmailService(service Emailer) *EmailService {
+	return &EmailService{
+		emailer: service,
 	}
-
-	if svc.User == "" || svc.Host == "" || svc.Port == "" || svc.Password == "" || svc.From == "" {
-		log.Panicf("SMTP credentials are not fully set: %+v", svc)
-		return nil
-	}
-
-	return svc
 }
 
-func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
+func (e *EmailService) SendConfirmation(toEmail, token string) error {
 	tmpl, err := template.ParseFiles("internal/templates/confirm_email.html")
 	if err != nil {
 		return err
@@ -49,33 +36,17 @@ func (e *EmailService) SendConfirmationEmail(toEmail, token string) error {
 		return err
 	}
 
-	if e.Host == "" || e.Port == "" || e.User == "" || e.Password == "" {
-		log.Panic("❌ SMTP credentials are invalid")
-	}
-
-	log.Println(e.Host, e.Port, e.User, e.Password)
-
-	auth := smtp.PlainAuth("", e.User, e.Password, e.Host)
-	msg := []byte("From: " + e.From + "\r\n" +
-		"To: " + toEmail + "\r\n" +
-		"Subject: Confirm Your Weather Subscription\r\n" +
-		"MIME-Version: 1.0\r\n" +
-		"Content-Type: text/html; charset=\"UTF-8\"\r\n" +
-		"\r\n" +
+	return e.emailer.Send(toEmail,
+		"Confirm Your Weather Subscription",
+		"MIME-Version: 1.0\r\nContent-Type: text/html; charset=\"UTF-8\"",
 		body.String())
-
-	addr := fmt.Sprintf("%s:%s", e.Host, e.Port)
-	return smtp.SendMail(addr, auth, e.From, []string{toEmail}, msg)
 }
 
-func (e *EmailService) Send(to, subject, body string) error {
-	auth := smtp.PlainAuth("", e.User, e.Password, e.Host)
+func (e *EmailService) SendWeather(toEmail, city string, forecast WeatherData) error {
+	temp := strconv.FormatFloat(forecast.Temperature, 'f', 1, 64)
+	body := "Weather update for " + city + ":\n" +
+		"Temperature: " + temp + "°C\n" +
+		"Condition: " + forecast.Condition
 
-	msg := "From: " + e.From + "\n" +
-		"To: " + to + "\n" +
-		"Subject: " + subject + "\n\n" +
-		body
-
-	addr := e.Host + ":" + e.Port
-	return smtp.SendMail(addr, auth, e.User, []string{to}, []byte(msg))
+	return e.emailer.Send(toEmail, "Your Daily Weather Update", "", body)
 }
