@@ -68,7 +68,7 @@ func (a *App) Init() ServiceContainer {
 	emailService := service.NewEmailService(smtpService)
 
 	srvContainer := ServiceContainer{
-		weatherService:      service.NewWeatherService(a.cfg.WeatherAPIKey),
+		weatherService:      service.NewWeatherService(a.cfg.WeatherAPIKey, &http.Client{}),
 		subscriptionService: service.NewSubscriptionService(subRepository, emailService),
 		emailService:        emailService,
 		subRepository:       *subRepository,
