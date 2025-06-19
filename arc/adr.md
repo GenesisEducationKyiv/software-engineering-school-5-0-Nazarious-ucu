@@ -34,17 +34,17 @@ Created time: June 9, 2025 12:01 AM
 
 # Таблиця `subscriptions`
 
-| Тип       | Стовпець      | Обмеження                          |
-|-----------|---------------|------------------------------------|
-| INTEGER   | `id`          | INTEGER PRIMARY KEY                |
-| TEXT      | `email`       | NOT NULL                           |
-| TEXT      | `city`        | NOT NULL                           |
-| TEXT      | `token`       | NOT NULL                           |
-| INTEGER   | `confirmed`   | NOT NULL DEFAULT 0                 |
-| INTEGER   | `unsubscribed`| NOT NULL DEFAULT 0                 |
-| DATETIME  | `created_at`  | NOT NULL DEFAULT CURRENT_TIMESTAMP |
-| DATETIME  | `last_sent`   | DEFAULT NULL                       |
-| TEXT      | `frequency`   | NOT NULL DEFAULT 'hourly'          |
+    | Тип       | Стовпець      | Обмеження                          |
+    |-----------|---------------|------------------------------------|
+    | INTEGER   | `id`          | INTEGER PRIMARY KEY                |
+    | TEXT      | `email`       | NOT NULL                           |
+    | TEXT      | `city`        | NOT NULL                           |
+    | TEXT      | `token`       | NOT NULL                           |
+    | INTEGER   | `confirmed`   | NOT NULL DEFAULT 0                 |
+    | INTEGER   | `unsubscribed`| NOT NULL DEFAULT 0                 |
+    | DATETIME  | `created_at`  | NOT NULL DEFAULT CURRENT_TIMESTAMP |
+    | DATETIME  | `last_sent`   | DEFAULT NULL                       |
+    | TEXT      | `frequency`   | NOT NULL DEFAULT 'hourly'          |
 
 ## Наслідки:
 

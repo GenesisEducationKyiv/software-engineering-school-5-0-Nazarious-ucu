@@ -1,12 +1,13 @@
 package notifier
 
 import (
-	"WeatherSubscriptionAPI/internal/repository"
-	service "WeatherSubscriptionAPI/internal/services"
 	"context"
 	"log"
-	"strconv"
 	"time"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 )
 
 const (
@@ -16,12 +17,36 @@ const (
 	sleepTime  = 5 * time.Minute
 )
 
-func StartWeatherNotifier(repo *repository.SubscriptionRepository,
-	serviceWeather *service.WeatherService, serviceEmail *service.EmailService) {
+type SubscriptionRepository interface {
+	GetConfirmed() ([]repository.Subscription, error)
+	UpdateLastSent(subscriptionID int) error
+}
+
+type EmailSender interface {
+	SendWeather(to, city string, forecast service.WeatherData) error
+}
+
+type Notifier struct {
+	Repo           SubscriptionRepository
+	WeatherService weather.WeatherServicer
+	EmailService   EmailSender
+}
+
+func New(repo SubscriptionRepository,
+	weatherService weather.WeatherServicer, emailService EmailSender,
+) *Notifier {
+	return &Notifier{
+		Repo:           repo,
+		WeatherService: weatherService,
+		EmailService:   emailService,
+	}
+}
+
+func (n *Notifier) StartWeatherNotifier() {
 	go func() {
 		for {
 			log.Println("Checking for subscriptions to send weather updates")
-			subs, err := repo.GetConfirmedSubscriptions()
+			subs, err := n.Repo.GetConfirmed()
 			if err != nil {
 				log.Println("DB query error:", err)
 				time.Sleep(time.Minute)
@@ -30,9 +55,8 @@ func StartWeatherNotifier(repo *repository.SubscriptionRepository,
 
 			now := time.Now()
 			for _, sub := range subs {
-				if shouldSendUpdate(sub, now) {
-					err := sendWeatherUpdate(sub, serviceWeather, serviceEmail, repo)
-
+				if n.ShouldSendUpdate(sub, now) {
+					err := n.SendWeatherUpdate(sub)
 					if err != nil {
 						log.Println("DB query error:", err)
 					}
@@ -44,7 +68,7 @@ func StartWeatherNotifier(repo *repository.SubscriptionRepository,
 	}()
 }
 
-func shouldSendUpdate(sub repository.Subscription, now time.Time) bool {
+func (n *Notifier) ShouldSendUpdate(sub repository.Subscription, now time.Time) bool {
 	if sub.LastSentAt == nil {
 		return true
 	}
@@ -62,25 +86,19 @@ func shouldSendUpdate(sub repository.Subscription, now time.Time) bool {
 	return now.After(nextTime)
 }
 
-func sendWeatherUpdate(sub repository.Subscription, weatherSvc *service.WeatherService,
-	emailSvc *service.EmailService, repo *repository.SubscriptionRepository) error {
+func (n *Notifier) SendWeatherUpdate(sub repository.Subscription) error {
 	ctx := context.Background()
 
-	forecast, err := weatherSvc.GetWeather(ctx, sub.City)
+	forecast, err := n.WeatherService.GetByCity(ctx, sub.City)
 	if err != nil {
 		log.Println("Weather fetch error for", sub.City, ":", err)
 		return err
 	}
 
-	temp := strconv.FormatFloat(forecast.Temperature, 'f', 1, 64)
-	body := "Weather update for " + sub.City + ":\n" +
-		"Temperature: " + temp + "°C\n" +
-		"Condition: " + forecast.Condition
-
-	if err := emailSvc.Send(sub.Email, "Your weather update", body); err != nil {
+	if err := n.EmailService.SendWeather(sub.Email, sub.City, forecast); err != nil {
 		log.Println("Email error:", err)
 		return err
 	}
 
-	return repo.UpdateLastSent(sub.ID)
+	return n.Repo.UpdateLastSent(sub.ID)
 }

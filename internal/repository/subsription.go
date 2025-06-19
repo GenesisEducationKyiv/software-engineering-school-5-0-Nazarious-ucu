@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 )
 
 const dayHours = 24
+
+var ErrSubscriptionExists = errors.New("subscription already exists")
 
 type Subscription struct {
 	ID         int
@@ -27,7 +30,19 @@ func NewSubscriptionRepository(db *sql.DB) *SubscriptionRepository {
 }
 
 func (r *SubscriptionRepository) Create(email, city, token string, frequency string) error {
-	_, err := r.DB.Exec(
+	var cnt int
+	err := r.DB.QueryRow(
+		`SELECT COUNT(*) FROM subscriptions WHERE email = ? AND city = ?`,
+		email, city,
+	).Scan(&cnt)
+	if err != nil {
+		return err
+	}
+	if cnt > 0 {
+		return ErrSubscriptionExists
+	}
+
+	_, err = r.DB.Exec(
 		`INSERT INTO subscriptions 
     				(email, city, token, confirmed, unsubscribed, created_at, frequency, last_sent)
          VALUES (?, ?, ?, 0, 0, ?, ?, null)`,
@@ -58,7 +73,7 @@ func (r *SubscriptionRepository) Unsubscribe(token string) (bool, error) {
 	return count > 0, err
 }
 
-func (r *SubscriptionRepository) GetConfirmedSubscriptions() ([]Subscription, error) {
+func (r *SubscriptionRepository) GetConfirmed() ([]Subscription, error) {
 	rows, err := r.DB.Query(`
 		SELECT id, email, city, frequency, last_sent
 		FROM subscriptions
@@ -70,7 +85,7 @@ func (r *SubscriptionRepository) GetConfirmedSubscriptions() ([]Subscription, er
 	defer func(rows *sql.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Panic(err)
+			log.Println(err)
 		}
 	}(rows)
 
