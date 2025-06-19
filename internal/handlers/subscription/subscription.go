@@ -1,6 +1,7 @@
 package subscription
 
 import (
+	"log"
 	"net/http"
 
 	_ "github.com/Nazarious-ucu/weather-subscription-api/internal/models"
@@ -36,6 +37,7 @@ func NewHandler(svc subscriber) *SubscriptionHandler {
 // @Failure 500
 // @Router /subscribe [post]
 func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
+	log.Printf("email: %s, city: %s, frequency: %s", c.PostForm("email"), c.PostForm("city"), c.PostForm("frequency"))
 	email := c.PostForm("email")
 	city := c.PostForm("city")
 	frequency := c.PostForm("frequency")
@@ -45,6 +47,11 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 	}
 	err := h.Service.Subscribe(email, city, frequency)
 	if err != nil {
+		if err.Error() == "subscription already exists" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Email and city already subscribed"})
+			return
+		}
+		log.Printf("Failed to subscribe with that error: %s", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}

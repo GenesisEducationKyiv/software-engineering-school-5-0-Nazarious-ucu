@@ -24,7 +24,7 @@ func NewSMTPService(cfg *config.Config) *SMTPService {
 		From:     cfg.From,
 	}
 
-	if svc.User == "" || svc.Host == "" || svc.Port == "" || svc.Password == "" || svc.From == "" {
+	if svc.Host == "" || svc.Port == "" || svc.From == "" {
 		log.Printf("SMTP credentials are not fully set: %+v\n", svc)
 		return nil
 	}
@@ -32,7 +32,7 @@ func NewSMTPService(cfg *config.Config) *SMTPService {
 }
 
 func (e *SMTPService) Send(to, subject, additionalHeaders, body string) error {
-	if e.Host == "" || e.Port == "" || e.User == "" || e.Password == "" {
+	if e.Host == "" || e.Port == "" {
 		log.Println("SMTP credentials are invalid")
 	}
 
@@ -45,5 +45,5 @@ func (e *SMTPService) Send(to, subject, additionalHeaders, body string) error {
 		body
 
 	addr := e.Host + ":" + e.Port
-	return smtp.SendMail(addr, auth, e.User, []string{to}, []byte(msg))
+	return smtp.SendMail(addr, auth, e.From, []string{to}, []byte(msg))
 }

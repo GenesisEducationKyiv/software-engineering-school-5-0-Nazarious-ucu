@@ -12,17 +12,19 @@ type Emailer interface {
 }
 
 type EmailService struct {
-	emailer Emailer
+	emailer      Emailer
+	templatesDir string
 }
 
-func NewEmailService(service Emailer) *EmailService {
+func NewEmailService(service Emailer, tempsDir string) *EmailService {
 	return &EmailService{
-		emailer: service,
+		emailer:      service,
+		templatesDir: tempsDir,
 	}
 }
 
 func (e *EmailService) SendConfirmation(toEmail, token string) error {
-	tmpl, err := template.ParseFiles("internal/templates/confirm_email.html")
+	tmpl, err := template.ParseFiles(e.templatesDir + "/confirm_email.html")
 	if err != nil {
 		return err
 	}

@@ -26,14 +26,14 @@ type App struct {
 }
 
 type ServiceContainer struct {
-	weatherService      *service.WeatherService
-	subscriptionService *service.SubscriptionService
-	emailService        *service.EmailService
-	subRepository       repository.SubscriptionRepository
+	WeatherService      *service.WeatherService
+	SubscriptionService *service.SubscriptionService
+	EmailService        *service.EmailService
+	SubRepository       repository.SubscriptionRepository
 
-	router *gin.Engine
-	srv    *http.Server
-	db     *sql.DB
+	Router *gin.Engine
+	Srv    *http.Server
+	Db     *sql.DB
 }
 
 func New(cfg config.Config, logger *log.Logger) *App {
@@ -46,12 +46,12 @@ func New(cfg config.Config, logger *log.Logger) *App {
 func (a *App) Init() ServiceContainer {
 	a.log.Println("Initializing application with configuration:", a.cfg)
 
-	db, err := createSqliteDb()
+	db, err := CreateSqliteDb(a.cfg.DB.Dialect, a.cfg.DB.Source)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	if err := initSqliteDb(db); err != nil {
+	if err := InitSqliteDb(db, a.cfg.DB.Dialect, a.cfg.DB.MigrationsPath); err != nil {
 		log.Panic(err)
 	}
 
@@ -65,17 +65,17 @@ func (a *App) Init() ServiceContainer {
 
 	smtpService := emailer.NewSMTPService(&a.cfg)
 	subRepository := repository.NewSubscriptionRepository(db)
-	emailService := service.NewEmailService(smtpService)
+	emailService := service.NewEmailService(smtpService, a.cfg.TemplatesDir)
 
 	srvContainer := ServiceContainer{
-		weatherService:      service.NewWeatherService(a.cfg.WeatherAPIKey, &http.Client{}),
-		subscriptionService: service.NewSubscriptionService(subRepository, emailService),
-		emailService:        emailService,
-		subRepository:       *subRepository,
+		WeatherService:      service.NewWeatherService(a.cfg.WeatherAPIKey, &http.Client{}),
+		SubscriptionService: service.NewSubscriptionService(subRepository, emailService),
+		EmailService:        emailService,
+		SubRepository:       *subRepository,
 
-		router: gin.Default(),
-		srv:    apiServer,
-		db:     db,
+		Router: gin.Default(),
+		Srv:    apiServer,
+		Db:     db,
 	}
 
 	return srvContainer
@@ -85,28 +85,28 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 	a.log.Println("Starting server on", a.cfg.Server.Address)
 
 	defer func() {
-		if err := srvContainer.srv.Close(); err != nil {
+		if err := srvContainer.Srv.Close(); err != nil {
 			a.log.Println("Error stopping server:", err)
 		}
 	}()
 
-	subHandler := subscription.NewHandler(srvContainer.subscriptionService)
-	weatherHandler := weather.NewHandler(srvContainer.weatherService)
+	subHandler := subscription.NewHandler(srvContainer.SubscriptionService)
+	weatherHandler := weather.NewHandler(srvContainer.WeatherService)
 
-	notificator := notifier.New(&srvContainer.subRepository, srvContainer.weatherService, srvContainer.emailService)
+	notificator := notifier.New(&srvContainer.SubRepository, srvContainer.WeatherService, srvContainer.EmailService)
 
-	api := srvContainer.router.Group("/api")
+	api := srvContainer.Router.Group("/api")
 	{
 		api.GET("/weather", weatherHandler.GetWeather)
 		api.POST("/subscribe", subHandler.Subscribe)
 		api.GET("/confirm/:token", subHandler.Confirm)
 		api.GET("/unsubscribe/:token", subHandler.Unsubscribe)
 	}
-	srvContainer.router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
+	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
 
 	notificator.StartWeatherNotifier()
 
-	if err := srvContainer.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err := srvContainer.Srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 	return nil
@@ -120,14 +120,14 @@ func (a *App) Stop(srvContainer ServiceContainer) error {
 		if err := db.Close(); err != nil {
 			log.Panicf("failed to close database connection: %v", err)
 		}
-	}(srvContainer.db)
+	}(srvContainer.Db)
 
 	a.log.Println("Server stopped successfully")
 	return nil
 }
 
-func createSqliteDb() (*sql.DB, error) {
-	db, err := sql.Open("sqlite", "file:weather.db?cache=shared&mode=rwc")
+func CreateSqliteDb(dialect, name string) (*sql.DB, error) {
+	db, err := sql.Open(dialect, "file:weather.Db?cache=shared&mode=rwc")
 	if err != nil {
 		return nil, err
 	}
@@ -139,12 +139,13 @@ func createSqliteDb() (*sql.DB, error) {
 	return db, nil
 }
 
-func initSqliteDb(db *sql.DB) error {
-	if err := goose.SetDialect("sqlite3"); err != nil {
+func InitSqliteDb(db *sql.DB, dialect, migrationPath string) error {
+	log.Println("Initializing migrations:", migrationPath)
+	if err := goose.SetDialect(dialect); err != nil {
 		return err
 	}
 
-	if err := goose.Up(db, "./migrations"); err != nil {
+	if err := goose.Up(db, migrationPath); err != nil {
 		return err
 	}
 

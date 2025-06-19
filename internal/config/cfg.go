@@ -10,6 +10,11 @@ type Server struct {
 	ReadTimeout int
 }
 
+type Db struct {
+	Dialect        string
+	Source         string
+	MigrationsPath string
+}
 type Config struct {
 	WeatherAPIKey string
 
@@ -20,6 +25,9 @@ type Config struct {
 	From     string
 
 	Server Server
+	DB     Db
+
+	TemplatesDir string
 }
 
 func NewConfig() *Config {
@@ -38,7 +46,13 @@ func NewConfig() *Config {
 
 		Server: Server{
 			Address:     os.Getenv("SERVER_ADDRESS"),
-			ReadTimeout: timeout, // Default read timeout in seconds
+			ReadTimeout: timeout,
 		},
+		DB: Db{
+			Dialect:        os.Getenv("DB_DIALECT"),
+			Source:         os.Getenv("DB_NAME"),
+			MigrationsPath: os.Getenv("DB_MIGRATIONS_DIR"),
+		},
+		TemplatesDir: os.Getenv("TEMPLATES_DIR"),
 	}
 }
