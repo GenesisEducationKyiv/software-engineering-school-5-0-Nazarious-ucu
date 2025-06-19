@@ -24,8 +24,7 @@ type WeatherService struct {
 	client HTTPClient
 }
 
-//const timeoutTime = 10 * time.Second
-
+// const timeoutTime = 10 * time.Second
 func NewWeatherService(apiKey string, client HTTPClient) *WeatherService {
 	return &WeatherService{APIKey: apiKey, client: client}
 }

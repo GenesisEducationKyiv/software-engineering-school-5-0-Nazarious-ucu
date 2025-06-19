@@ -28,7 +28,9 @@ func TestGetWeather_NoCity(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 
-	c.Request, _ = http.NewRequest(http.MethodGet, "/weather", nil)
+	var err error
+	c.Request, err = http.NewRequest(http.MethodGet, "/weather", nil)
+	assert.NoError(t, err)
 
 	h := weather.NewHandler(&mockService{})
 	h.GetWeather(c)
@@ -40,7 +42,9 @@ func TestGetWeather_NoCity(t *testing.T) {
 func TestGetWeather_ServiceError(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
-	req, _ := http.NewRequest(http.MethodGet, "/weather?city=Kyiv", nil)
+	req, err := http.NewRequest(http.MethodGet, "/weather?city=Kyiv", nil)
+	assert.NoError(t, err)
+
 	c.Request = req
 
 	errMsg := "service unavailable"
@@ -61,11 +65,14 @@ func TestGetWeather_Success(t *testing.T) {
 	m := &mockService{data: data}
 	h := weather.NewHandler(m)
 
-	req, _ := http.NewRequest(http.MethodGet, "/weather?city=Kyiv", nil)
+	req, err := http.NewRequest(http.MethodGet, "/weather?city=Kyiv", nil)
+	assert.NoError(t, err)
+
 	c.Request = req
 
 	h.GetWeather(c)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, fmt.Sprintf(`{"city":"%s","temperature":%v,"condition":"%s"}`, data.City, data.Temperature, data.Condition), rec.Body.String())
+	assert.JSONEq(t, fmt.Sprintf(`{"city":"%s","temperature":%v,"condition":"%s"}`,
+		data.City, data.Temperature, data.Condition), rec.Body.String())
 }

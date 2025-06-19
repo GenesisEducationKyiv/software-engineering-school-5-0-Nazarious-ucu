@@ -2,14 +2,16 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
+	"github.com/stretchr/testify/assert"
 )
 
 type mockHTTPClient struct {
@@ -28,7 +30,9 @@ func TestGetByCity(t *testing.T) {
 			}
 			return &http.Response{
 				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(strings.NewReader(`{"location": {"name": "London"}, "current": {"temp_c": 15.0, "condition": {"text": "Sunny"}}}`)),
+				Body: io.NopCloser(strings.NewReader(
+					`{"location": {"name": "London"}, 
+						"current": {"temp_c": 15.0, "condition": {"text": "Sunny"}}}`)),
 			}, nil
 		},
 	}
@@ -104,10 +108,12 @@ func TestGetByCity_Timeout(t *testing.T) {
 			case <-time.After(2 * time.Second):
 				return &http.Response{
 					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(strings.NewReader(`{"location": {"name": "London"}, "current": {"temp_c": 15.0, "condition": {"text": "Sunny"}}}`)),
+					Body: io.NopCloser(strings.NewReader(
+						`{"location": {"name": "London"}, "current": 
+							{"temp_c": 15.0, "condition": {"text": "Sunny"}}}`)),
 				}, nil
 			case <-time.After(1 * time.Second):
-				return nil, fmt.Errorf("request timed out")
+				return nil, errors.New("request timed out")
 			}
 		},
 	}

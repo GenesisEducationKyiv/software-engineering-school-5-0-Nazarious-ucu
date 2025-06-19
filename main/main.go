@@ -13,7 +13,6 @@ import (
 // @host localhost:8080
 // @BasePath /api/
 func main() {
-
 	cfg := config.NewConfig()
 
 	logger := log.New(log.Writer(), "WeatherSubscriptionAPI: ", log.LstdFlags)
@@ -21,9 +20,6 @@ func main() {
 	application := app.New(*cfg, logger)
 
 	serviceContainer := application.Init()
-	//if err != nil {
-	//	log.Panic(err)
-	//}
 	if err := application.Start(serviceContainer); err != nil {
 		log.Panic(err)
 	}

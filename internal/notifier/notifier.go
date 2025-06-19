@@ -7,7 +7,7 @@ import (
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services"
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 )
 
 const (
@@ -33,7 +33,8 @@ type Notifier struct {
 }
 
 func New(repo SubscriptionRepository,
-	weatherService weather.WeatherServicer, emailService EmailSender) *Notifier {
+	weatherService weather.WeatherServicer, emailService EmailSender,
+) *Notifier {
 	return &Notifier{
 		Repo:           repo,
 		WeatherService: weatherService,

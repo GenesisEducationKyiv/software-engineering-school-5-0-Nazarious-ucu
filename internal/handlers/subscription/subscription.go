@@ -37,7 +37,8 @@ func NewHandler(svc subscriber) *SubscriptionHandler {
 // @Failure 500
 // @Router /subscribe [post]
 func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
-	log.Printf("email: %s, city: %s, frequency: %s", c.PostForm("email"), c.PostForm("city"), c.PostForm("frequency"))
+	log.Printf("email: %s, city: %s, frequency: %s",
+		c.PostForm("email"), c.PostForm("city"), c.PostForm("frequency"))
 	email := c.PostForm("email")
 	city := c.PostForm("city")
 	frequency := c.PostForm("frequency")

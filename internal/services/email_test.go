@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services"
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,15 +24,20 @@ func (m *mockEmailer) Send(to, subject, headers, body string) error {
 func setupTemplate(t *testing.T) func() {
 	t.Helper()
 	dir := filepath.Join("internal", "templates")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatalf("cannot create template dir: %v", err)
 	}
 	tmpl := filepath.Join(dir, "confirm_email.html")
 	content := `<p>Hello {{.Email}}, please <a href="{{.Link}}">confirm</a></p>`
-	if err := os.WriteFile(tmpl, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(tmpl, []byte(content), 0o600); err != nil {
 		t.Fatalf("cannot write template: %v", err)
 	}
-	return func() { os.RemoveAll("internal") }
+	return func() {
+		err := os.RemoveAll("internal")
+		if err != nil {
+			return
+		}
+	}
 }
 
 func TestEmailService_SendConfirmation(t *testing.T) {
@@ -50,7 +56,7 @@ func TestEmailService_SendConfirmation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			mock := &mockEmailer{sendErr: tc.sendErr}
-			svc := service.NewEmailService(mock)
+			svc := service.NewEmailService(mock, "internal/templates")
 
 			err := svc.SendConfirmation("user@example.com", "TOKEN123")
 			if tc.wantErr {
@@ -75,7 +81,7 @@ func TestEmailService_SendWeather(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			mock := &mockEmailer{sendErr: tc.sendErr}
-			svc := service.NewEmailService(mock)
+			svc := service.NewEmailService(mock, "internal/templates")
 
 			forecast := service.WeatherData{
 				City:        "Kyiv",

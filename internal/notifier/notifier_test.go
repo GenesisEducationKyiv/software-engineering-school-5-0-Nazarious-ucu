@@ -8,7 +8,7 @@ import (
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services"
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -62,10 +62,13 @@ func TestShouldSendUpdate(t *testing.T) {
 	}{
 		{"no last sent", repository.Subscription{LastSentAt: nil, Frequency: "hourly"}, true},
 		{"hourly - just sent", repository.Subscription{LastSentAt: ptrTime(now), Frequency: "hourly"}, false},
-		{"hourly - overdue", repository.Subscription{LastSentAt: ptrTime(now.Add(-2 * time.Hour)), Frequency: "hourly"}, true},
+		{"hourly - overdue", repository.Subscription{LastSentAt: ptrTime(now.Add(-2 * time.Hour)),
+			Frequency: "hourly"}, true},
 		{"daily - just sent", repository.Subscription{LastSentAt: ptrTime(now), Frequency: "daily"}, false},
-		{"daily - overdue", repository.Subscription{LastSentAt: ptrTime(now.Add(-25 * time.Hour)), Frequency: "daily"}, true},
-		{"unknown freq", repository.Subscription{LastSentAt: ptrTime(now.Add(-100 * time.Hour)), Frequency: "weekly"}, false},
+		{"daily - overdue", repository.Subscription{LastSentAt: ptrTime(now.Add(-25 * time.Hour)),
+			Frequency: "daily"}, true},
+		{"unknown freq", repository.Subscription{LastSentAt: ptrTime(now.Add(-100 * time.Hour)),
+			Frequency: "weekly"}, false},
 	}
 
 	for _, tc := range tests {
@@ -105,7 +108,8 @@ func TestSendWeatherUpdate(t *testing.T) {
 
 		assert.Equal(t, []string{emailAddr}, mockEmail.sentTo)
 		assert.Equal(t, []string{city}, mockEmail.sentCity)
-		assert.Equal(t, []service.WeatherData{{City: city, Temperature: 10.0, Condition: "Clear"}}, mockEmail.sentForecast)
+		assert.Equal(t, []service.WeatherData{{City: city, Temperature: 10.0, Condition: "Clear"}},
+			mockEmail.sentForecast)
 
 		assert.Equal(t, []int{42}, mockRepo.updatedIDs)
 	})
