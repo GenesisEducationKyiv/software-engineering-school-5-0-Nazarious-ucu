@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
 	"github.com/robfig/cron/v3"
 )
 
@@ -18,9 +17,9 @@ const (
 )
 
 type subscriptionRepository interface {
-	GetConfirmed() ([]repository.Subscription, error)
+	GetConfirmed() ([]models.Subscription, error)
 
-	GetConfirmedByFrequency(frequency string) ([]repository.Subscription, error)
+	GetConfirmedByFrequency(frequency string) ([]models.Subscription, error)
 	UpdateLastSent(subscriptionID int) error
 }
 
@@ -33,9 +32,9 @@ type weatherGetter interface {
 }
 
 type Notifier struct {
-	Repo           subscriptionRepository
-	WeatherService weatherGetter
-	EmailService   emailSender
+	repo           subscriptionRepository
+	weatherService weatherGetter
+	emailService   emailSender
 	logger         *log.Logger
 	cron           *cron.Cron
 	cancel         context.CancelFunc
@@ -46,9 +45,9 @@ func New(repo subscriptionRepository, ws weatherGetter,
 ) *Notifier {
 	c := cron.New(cron.WithSeconds())
 	return &Notifier{
-		Repo:           repo,
-		WeatherService: ws,
-		EmailService:   es,
+		repo:           repo,
+		weatherService: ws,
+		emailService:   es,
 		logger:         logger,
 		cron:           c,
 	}
@@ -87,14 +86,14 @@ func (n *Notifier) runDue(ctx context.Context, frequency string) {
 	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 
-	subs, err := n.Repo.GetConfirmedByFrequency(frequency)
+	subs, err := n.repo.GetConfirmedByFrequency(frequency)
 	if err != nil {
 		n.logger.Println("Error fetching due subs:", err)
 		return
 	}
 
 	for _, sub := range subs {
-		go func(s repository.Subscription) {
+		go func(s models.Subscription) {
 			if err := n.sendOne(ctx, s); err != nil {
 				n.logger.Println("Error sending update:", err)
 			}
@@ -102,15 +101,15 @@ func (n *Notifier) runDue(ctx context.Context, frequency string) {
 	}
 }
 
-func (n *Notifier) sendOne(ctx context.Context, sub repository.Subscription) error {
-	forecast, err := n.WeatherService.GetByCity(ctx, sub.City)
+func (n *Notifier) sendOne(ctx context.Context, sub models.Subscription) error {
+	forecast, err := n.weatherService.GetByCity(ctx, sub.City)
 	if err != nil {
 		return err
 	}
 
-	if err := n.EmailService.SendWeather(sub.Email, sub.City, forecast); err != nil {
+	if err := n.emailService.SendWeather(sub.Email, sub.City, forecast); err != nil {
 		return err
 	}
 
-	return n.Repo.UpdateLastSent(sub.ID)
+	return n.repo.UpdateLastSent(sub.ID)
 }

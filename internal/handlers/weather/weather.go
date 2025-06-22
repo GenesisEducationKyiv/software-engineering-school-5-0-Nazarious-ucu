@@ -14,11 +14,11 @@ type servicer interface {
 }
 
 type Handler struct {
-	Service servicer
+	service servicer
 }
 
 func NewHandler(svc servicer) *Handler {
-	return &Handler{Service: svc}
+	return &Handler{service: svc}
 }
 
 // GetWeather
@@ -40,7 +40,7 @@ func (h *Handler) GetWeather(c *gin.Context) {
 	}
 	ctx := context.Background()
 
-	data, err := h.Service.GetByCity(ctx, city)
+	data, err := h.service.GetByCity(ctx, city)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

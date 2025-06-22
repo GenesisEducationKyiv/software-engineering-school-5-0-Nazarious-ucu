@@ -14,7 +14,6 @@ import (
 // @BasePath /api/
 func main() {
 	cfg, err := config.NewConfig()
-
 	if err != nil {
 		log.Panicf("failed to load configuration: %v", err)
 	}

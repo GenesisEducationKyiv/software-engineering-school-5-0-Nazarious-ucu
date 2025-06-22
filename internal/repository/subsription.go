@@ -5,18 +5,12 @@ import (
 	"log"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
+
 	_ "modernc.org/sqlite"
 )
 
 const dayHours = 24
-
-type Subscription struct {
-	ID         int
-	Email      string
-	City       string
-	Frequency  string
-	LastSentAt *time.Time
-}
 
 type SubscriptionRepository struct {
 	logger *log.Logger
@@ -59,7 +53,7 @@ func (r *SubscriptionRepository) Unsubscribe(token string) (bool, error) {
 	return count > 0, err
 }
 
-func (r *SubscriptionRepository) GetConfirmed() ([]Subscription, error) {
+func (r *SubscriptionRepository) GetConfirmed() ([]models.Subscription, error) {
 	rows, err := r.DB.Query(`
 		SELECT id, email, city, frequency, last_sent
 		FROM subscriptions
@@ -75,11 +69,11 @@ func (r *SubscriptionRepository) GetConfirmed() ([]Subscription, error) {
 		}
 	}(rows)
 
-	var subs []Subscription
+	var subs []models.Subscription
 	now := time.Now()
 
 	for rows.Next() {
-		var sub Subscription
+		var sub models.Subscription
 		var lastSent sql.NullTime
 
 		if err := rows.Scan(&sub.ID, &sub.Email, &sub.City, &sub.Frequency, &lastSent); err != nil {
@@ -118,7 +112,7 @@ func (r *SubscriptionRepository) UpdateLastSent(subscriptionID int) error {
 	return err
 }
 
-func (r *SubscriptionRepository) GetConfirmedByFrequency(frequency string) ([]Subscription, error) {
+func (r *SubscriptionRepository) GetConfirmedByFrequency(frequency string) ([]models.Subscription, error) {
 	rows, err := r.DB.Query(`
 		SELECT id, email, city, frequency, last_sent
 		FROM subscriptions
@@ -134,9 +128,9 @@ func (r *SubscriptionRepository) GetConfirmedByFrequency(frequency string) ([]Su
 		}
 	}(rows)
 
-	var subs []Subscription
+	var subs []models.Subscription
 	for rows.Next() {
-		var sub Subscription
+		var sub models.Subscription
 		var lastSent sql.NullTime
 
 		if err := rows.Scan(&sub.ID, &sub.Email, &sub.City, &sub.Frequency, &lastSent); err != nil {

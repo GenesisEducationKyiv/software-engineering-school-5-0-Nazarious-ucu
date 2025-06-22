@@ -18,16 +18,16 @@ type SubscriptionRepository interface {
 }
 
 type Service struct {
-	Repo    SubscriptionRepository
-	Service ConfirmationEmailer
+	repo    SubscriptionRepository
+	emailer ConfirmationEmailer
 }
 
 func NewService(repo SubscriptionRepository,
 	emailService ConfirmationEmailer,
 ) *Service {
 	return &Service{
-		Repo:    repo,
-		Service: emailService,
+		repo:    repo,
+		emailer: emailService,
 	}
 }
 
@@ -38,17 +38,17 @@ func (s *Service) Subscribe(email, city string, frequency string) error {
 	}
 	token := hex.EncodeToString(tokenBytes)
 
-	if err := s.Repo.Create(email, city, token, frequency); err != nil {
+	if err := s.repo.Create(email, city, token, frequency); err != nil {
 		return err
 	}
 
-	return s.Service.SendConfirmation(email, token)
+	return s.emailer.SendConfirmation(email, token)
 }
 
 func (s *Service) Confirm(token string) (bool, error) {
-	return s.Repo.Confirm(token)
+	return s.repo.Confirm(token)
 }
 
 func (s *Service) Unsubscribe(token string) (bool, error) {
-	return s.Repo.Unsubscribe(token)
+	return s.repo.Unsubscribe(token)
 }
