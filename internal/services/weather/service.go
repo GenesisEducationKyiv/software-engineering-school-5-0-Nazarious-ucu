@@ -1,4 +1,4 @@
-package service
+package weather
 
 import (
 	"context"
@@ -7,50 +7,46 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 )
 
-type WeatherData struct {
-	City        string  `json:"city"`
-	Temperature float64 `json:"temperature"`
-	Condition   string  `json:"condition"`
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
-type WeatherService struct {
+type Service struct {
 	APIKey string
+	client HTTPClient
+	logger *log.Logger
 }
 
-const timeoutTime = 10 * time.Second
+func NewService(apiKey string, httpClient HTTPClient, logger *log.Logger) *Service {
+	return &Service{APIKey: apiKey, client: httpClient, logger: logger}
+}
 
-// func NewWeatherService(apiKey string) *WeatherService {
-//	return &WeatherService{APIKey: apiKey}
-// }
-
-func (s *WeatherService) GetWeather(ctx context.Context, city string) (WeatherData, error) {
+func (s *Service) GetByCity(ctx context.Context, city string) (models.WeatherData, error) {
 	fmt.Println("Getting weather with API token: ", s.APIKey)
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", s.APIKey, city)
 
-	client := &http.Client{Timeout: timeoutTime}
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return WeatherData{}, err
+		return models.WeatherData{}, err
 	}
 
-	resp, err := client.Do(req)
-
+	resp, err := s.client.Do(req)
 	if err != nil {
-		return WeatherData{}, err
+		return models.WeatherData{}, err
 	}
 	defer func(body io.ReadCloser) {
 		err := body.Close()
 		if err != nil {
-			log.Panic(err)
+			s.logger.Println("failed to close response body: %w", err)
 		}
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		return WeatherData{}, fmt.Errorf("weather API error: status %d", resp.StatusCode)
+		return models.WeatherData{}, fmt.Errorf("weather API error: status %d", resp.StatusCode)
 	}
 
 	var raw struct {
@@ -66,10 +62,10 @@ func (s *WeatherService) GetWeather(ctx context.Context, city string) (WeatherDa
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return WeatherData{}, err
+		return models.WeatherData{}, err
 	}
 
-	return WeatherData{
+	return models.WeatherData{
 		City:        raw.Location.Name,
 		Temperature: raw.Current.TempC,
 		Condition:   raw.Current.Condition.Text,

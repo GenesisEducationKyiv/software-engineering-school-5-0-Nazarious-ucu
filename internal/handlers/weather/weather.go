@@ -1,19 +1,24 @@
-package handlers
+package weather
 
 import (
-	service "WeatherSubscriptionAPI/internal/services"
 	"context"
 	"net/http"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-type WeatherHandler struct {
-	Service *service.WeatherService
+type servicer interface {
+	GetByCity(ctx context.Context, city string) (models.WeatherData, error)
 }
 
-func NewWeatherHandler(svc *service.WeatherService) *WeatherHandler {
-	return &WeatherHandler{Service: svc}
+type Handler struct {
+	service servicer
+}
+
+func NewHandler(svc servicer) *Handler {
+	return &Handler{service: svc}
 }
 
 // GetWeather
@@ -23,19 +28,19 @@ func NewWeatherHandler(svc *service.WeatherService) *WeatherHandler {
 // @Accept json
 // @Produce json
 // @Param city query string true "City name"
-// @Success 200 {object} service.WeatherData
+// @Success 200 {object} models.WeatherData
 // @Failure 400
 // @Failure 500
 // @Router /weather [get]
-func (h *WeatherHandler) GetWeather(c *gin.Context) {
+func (h *Handler) GetWeather(c *gin.Context) {
 	city := c.Query("city")
 	if city == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "city query parameter is required"})
 		return
 	}
-	ctx := context.Background() // або переданий контекст зверху
+	ctx := context.Background()
 
-	data, err := h.Service.GetWeather(ctx, city)
+	data, err := h.service.GetByCity(ctx, city)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

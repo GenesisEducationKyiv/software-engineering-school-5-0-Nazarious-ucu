@@ -1,19 +1,23 @@
-package handlers
+package subscription
 
 import (
-	_ "WeatherSubscriptionAPI/internal/models"
-	service "WeatherSubscriptionAPI/internal/services"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type SubscriptionHandler struct {
-	Service *service.SubscriptionService
+type subscriber interface {
+	Subscribe(email, city, frequency string) error
+	Confirm(token string) (bool, error)
+	Unsubscribe(token string) (bool, error)
 }
 
-func NewSubscriptionHandler(svc *service.SubscriptionService) *SubscriptionHandler {
-	return &SubscriptionHandler{Service: svc}
+type Handler struct {
+	Service subscriber
+}
+
+func NewHandler(svc subscriber) *Handler {
+	return &Handler{Service: svc}
 }
 
 // Subscribe
@@ -29,21 +33,21 @@ func NewSubscriptionHandler(svc *service.SubscriptionService) *SubscriptionHandl
 // @Failure 404
 // @Failure 500
 // @Router /subscribe [post]
-func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
+func (h *Handler) Subscribe(c *gin.Context) {
 	email := c.PostForm("email")
 	city := c.PostForm("city")
 	frequency := c.PostForm("frequency")
-	if email == "" || city == "" {
-		c.Writer.WriteHeader(http.StatusBadRequest)
+	if email == "" || city == "" || frequency == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required fields"})
 		return
 	}
 	err := h.Service.Subscribe(email, city, frequency)
 	if err != nil {
-		c.Writer.WriteHeader(http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
-	c.Writer.WriteHeader(http.StatusOK)
+	c.JSON(http.StatusOK, gin.H{"message": "Subscribed successfully"})
 }
 
 // Confirm
@@ -55,7 +59,7 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 // @Failure 400
 // @Failure 404
 // @Router /confirm/{token} [get]
-func (h *SubscriptionHandler) Confirm(c *gin.Context) {
+func (h *Handler) Confirm(c *gin.Context) {
 	token := c.Param("token")
 	ok, err := h.Service.Confirm(token)
 	if err != nil {
@@ -78,7 +82,7 @@ func (h *SubscriptionHandler) Confirm(c *gin.Context) {
 // @Failure 400
 // @Failure 404
 // @Router /unsubscribe/{token} [get]
-func (h *SubscriptionHandler) Unsubscribe(c *gin.Context) {
+func (h *Handler) Unsubscribe(c *gin.Context) {
 	token := c.Param("token")
 	ok, err := h.Service.Unsubscribe(token)
 	if err != nil {
