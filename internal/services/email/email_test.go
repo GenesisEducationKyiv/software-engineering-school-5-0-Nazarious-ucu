@@ -1,4 +1,4 @@
-package service_test
+package email_test
 
 import (
 	"errors"
@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -56,7 +58,7 @@ func TestEmailService_SendConfirmation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			mock := &mockEmailer{sendErr: tc.sendErr}
-			svc := service.NewEmailService(mock, "internal/templates")
+			svc := email.NewService(mock, "internal/templates")
 
 			err := svc.SendConfirmation("user@example.com", "TOKEN123")
 			if tc.wantErr {
@@ -81,9 +83,9 @@ func TestEmailService_SendWeather(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			mock := &mockEmailer{sendErr: tc.sendErr}
-			svc := service.NewEmailService(mock, "internal/templates")
+			svc := email.NewService(mock, "internal/templates")
 
-			forecast := service.WeatherData{
+			forecast := models.WeatherData{
 				City:        "Kyiv",
 				Temperature: 5.0,
 				Condition:   "Snow",

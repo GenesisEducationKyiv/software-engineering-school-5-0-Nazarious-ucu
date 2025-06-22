@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -30,7 +31,10 @@ func TestMain(m *testing.M) {
 	fmt.Println("Starting integration tests...")
 
 	// Initialize the application
-	cfg := config.NewConfig()
+	cfg, err := config.NewConfig()
+	if err != nil {
+		log.Panicf("failed to load configuration: %v", err)
+	}
 	application := app.New(*cfg, log.Default())
 	srvContainer := application.Init()
 
@@ -44,8 +48,6 @@ func TestMain(m *testing.M) {
 		log.Panicf("failed to connect to the database: %v", err)
 	}
 
-	// a.log.Println("Starting server on", a.cfg.Server.Address)
-
 	defer func() {
 		if err := srvContainer.Srv.Close(); err != nil {
 			log.Println("Error stopping server:", err)
@@ -56,7 +58,12 @@ func TestMain(m *testing.M) {
 	weatherHandler := weather.NewHandler(srvContainer.WeatherService)
 
 	notificator := notifier.New(&srvContainer.SubRepository,
-		srvContainer.WeatherService, srvContainer.EmailService)
+		srvContainer.WeatherService,
+		srvContainer.EmailService,
+		&log.Logger{},
+		cfg.NotifierFreq.HourlyFrequency,
+		cfg.NotifierFreq.DailyFrequency,
+	)
 
 	api := srvContainer.Router.Group("/api")
 	{
@@ -67,16 +74,10 @@ func TestMain(m *testing.M) {
 	}
 	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
 
-	notificator.StartWeatherNotifier()
+	notificator.Start(context.Background())
 
 	// Create a test server
 	testServer := httptest.NewServer(srvContainer.Router)
-	defer func() {
-		if err := application.Stop(srvContainer); err != nil {
-			log.Panicf("failed to shutdown application: %v", err)
-		}
-		testServer.Close()
-	}()
 
 	initIntegration(testServer.URL, srvContainer.Db)
 

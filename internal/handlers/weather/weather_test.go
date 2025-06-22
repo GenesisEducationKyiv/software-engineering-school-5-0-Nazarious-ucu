@@ -8,19 +8,20 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
+
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 )
 
 type mockService struct {
-	data service.WeatherData
+	data models.WeatherData
 	err  error
 }
 
-func (m *mockService) GetByCity(ctx context.Context, city string) (service.WeatherData, error) {
+func (m *mockService) GetByCity(ctx context.Context, city string) (models.WeatherData, error) {
 	return m.data, m.err
 }
 
@@ -60,7 +61,7 @@ func TestGetWeather_ServiceError(t *testing.T) {
 func TestGetWeather_Success(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
-	data := service.WeatherData{City: "Kyiv", Temperature: 20.5, Condition: "Sunny"}
+	data := models.WeatherData{City: "Kyiv", Temperature: 20.5, Condition: "Sunny"}
 
 	m := &mockService{data: data}
 	h := weather.NewHandler(m)

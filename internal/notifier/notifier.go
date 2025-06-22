@@ -17,8 +17,6 @@ const (
 )
 
 type subscriptionRepository interface {
-	GetConfirmed() ([]models.Subscription, error)
-
 	GetConfirmedByFrequency(frequency string, ctx context.Context) ([]models.Subscription, error)
 	UpdateLastSent(subscriptionID int) error
 }
@@ -38,10 +36,12 @@ type Notifier struct {
 	logger         *log.Logger
 	cron           *cron.Cron
 	cancel         context.CancelFunc
+	hourlySpec     string
+	dailySpec      string
 }
 
 func New(repo subscriptionRepository, ws weatherGetter,
-	es emailSender, logger *log.Logger,
+	es emailSender, logger *log.Logger, hourlySpec, dailySpec string,
 ) *Notifier {
 	c := cron.New(cron.WithSeconds())
 	return &Notifier{
@@ -50,6 +50,8 @@ func New(repo subscriptionRepository, ws weatherGetter,
 		emailService:   es,
 		logger:         logger,
 		cron:           c,
+		hourlySpec:     hourlySpec,
+		dailySpec:      dailySpec,
 	}
 }
 
@@ -57,15 +59,15 @@ func (n *Notifier) Start(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	n.cancel = cancel
 
-	_, err := n.cron.AddFunc("@every 1h", func() {
-		n.runDue(ctx, freqHourly)
+	_, err := n.cron.AddFunc(n.hourlySpec, func() {
+		n.RunDue(ctx, freqHourly)
 	})
 	if err != nil {
 		return
 	}
 
-	_, err = n.cron.AddFunc("0 0 9 * * *", func() {
-		n.runDue(ctx, freqDaily)
+	_, err = n.cron.AddFunc(n.dailySpec, func() {
+		n.RunDue(ctx, freqDaily)
 	})
 	if err != nil {
 		return
@@ -82,7 +84,7 @@ func (n *Notifier) Stop() {
 	n.logger.Println("All cron jobs finished, notifier stopped")
 }
 
-func (n *Notifier) runDue(ctx context.Context, frequency string) {
+func (n *Notifier) RunDue(ctx context.Context, frequency string) {
 	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 
@@ -94,14 +96,14 @@ func (n *Notifier) runDue(ctx context.Context, frequency string) {
 
 	for _, sub := range subs {
 		go func(s models.Subscription) {
-			if err := n.sendOne(ctx, s); err != nil {
+			if err := n.SendOne(ctx, s); err != nil {
 				n.logger.Println("Error sending update:", err)
 			}
 		}(sub)
 	}
 }
 
-func (n *Notifier) sendOne(ctx context.Context, sub models.Subscription) error {
+func (n *Notifier) SendOne(ctx context.Context, sub models.Subscription) error {
 	forecast, err := n.weatherService.GetByCity(ctx, sub.City)
 	if err != nil {
 		return err

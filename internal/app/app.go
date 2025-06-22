@@ -33,15 +33,15 @@ type App struct {
 }
 
 type ServiceContainer struct {
-	weatherService      *service.Service
-	subscriptionService *subscriptions.Service
-	emailService        *email.Service
-	notificator         *notifier.Notifier
-	subRepository       repository.SubscriptionRepository
+	WeatherService      *service.Service
+	SubscriptionService *subscriptions.Service
+	EmailService        *email.Service
+	Notificator         *notifier.Notifier
+	SubRepository       repository.SubscriptionRepository
 
-	router *gin.Engine
-	srv    *http.Server
-	db     *sql.DB
+	Router *gin.Engine
+	Srv    *http.Server
+	Db     *sql.DB
 }
 
 func New(cfg config.Config, logger *log.Logger) *App {
@@ -72,24 +72,28 @@ func (a *App) Init() ServiceContainer {
 	}
 
 	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
+	a.log.Printf("Initializing SMTP service with config: %+v\n", a.cfg.Email)
 	subRepository := repository.NewSubscriptionRepository(db, a.log)
 	emailService := email.NewService(smtpService, a.cfg.TemplatesDir)
 	weatherService := service.NewService(a.cfg.WeatherAPIKey, &http.Client{}, a.log)
 	notificator := notifier.New(subRepository,
 		weatherService,
 		emailService,
-		a.log)
+		a.log,
+		a.cfg.NotifierFreq.HourlyFrequency,
+		a.cfg.NotifierFreq.DailyFrequency,
+	)
 
 	srvContainer := ServiceContainer{
-		weatherService:      weatherService,
-		subscriptionService: subscriptions.NewService(subRepository, emailService),
-		emailService:        emailService,
-		subRepository:       *subRepository,
-		notificator:         notificator,
+		WeatherService:      weatherService,
+		SubscriptionService: subscriptions.NewService(subRepository, emailService),
+		EmailService:        emailService,
+		SubRepository:       *subRepository,
+		Notificator:         notificator,
 
-		router: router,
-		srv:    apiServer,
-		db:     db,
+		Router: router,
+		Srv:    apiServer,
+		Db:     db,
 	}
 
 	return srvContainer
@@ -99,29 +103,26 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 	a.log.Println("Starting server on", a.cfg.Server.Address)
 
 	defer func() {
-		if err := srvContainer.srv.Close(); err != nil {
+		if err := srvContainer.Srv.Close(); err != nil {
 			a.log.Println("Error stopping server:", err)
 		}
 	}()
 
-	subHandler := subscription.NewHandler(srvContainer.subscriptionService)
-	weatherHandler := weather.NewHandler(srvContainer.weatherService)
+	subHandler := subscription.NewHandler(srvContainer.SubscriptionService)
+	weatherHandler := weather.NewHandler(srvContainer.WeatherService)
 
-	notificator := notifier.New(&srvContainer.SubRepository,
-		srvContainer.WeatherService, srvContainer.EmailService)
-
-	api := srvContainer.router.Group("/api")
+	api := srvContainer.Router.Group("/api")
 	{
 		api.GET("/weather", weatherHandler.GetWeather)
 		api.POST("/subscribe", subHandler.Subscribe)
 		api.GET("/confirm/:token", subHandler.Confirm)
 		api.GET("/unsubscribe/:token", subHandler.Unsubscribe)
 	}
-	srvContainer.router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
+	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
 
-	notificator.StartWeatherNotifier()
+	srvContainer.Notificator.Start(context.Background())
 
-	if err := srvContainer.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err := srvContainer.Srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 
@@ -138,19 +139,19 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 func (a *App) Stop(srvContainer ServiceContainer) error {
 	a.log.Println("Stopping application…")
 
-	srvContainer.notificator.Stop()
+	srvContainer.Notificator.Stop()
 	a.log.Println("Notifier stopped")
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
 	defer cancel()
 
-	if err := srvContainer.srv.Shutdown(ctx); err != nil {
+	if err := srvContainer.Srv.Shutdown(ctx); err != nil {
 		a.log.Println("HTTP shutdown error:", err)
 	} else {
 		a.log.Println("HTTP server stopped")
 	}
 
-	if err := srvContainer.db.Close(); err != nil {
+	if err := srvContainer.Db.Close(); err != nil {
 		a.log.Println("DB close error:", err)
 	} else {
 		a.log.Println("Database closed")

@@ -1,16 +1,19 @@
-package service_test
+package weather_test
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +40,7 @@ func TestGetByCity(t *testing.T) {
 		},
 	}
 
-	weatherService := service.NewWeatherService("mock_api_key", mockClient)
+	weatherService := weather.NewService("mock_api_key", mockClient, &log.Logger{})
 
 	ctx := context.Background()
 	data, err := weatherService.GetByCity(ctx, "London")
@@ -57,12 +60,12 @@ func TestGetByCity_CityNotFound(t *testing.T) {
 		},
 	}
 
-	weatherService := service.NewWeatherService("mock_api_key", mockClient)
+	weatherService := weather.NewService("mock_api_key", mockClient, &log.Logger{})
 
 	ctx := context.Background()
 	data, err := weatherService.GetByCity(ctx, "UnknownCity")
 	assert.Error(t, err)
-	assert.Equal(t, service.WeatherData{}, data)
+	assert.Equal(t, models.WeatherData{}, data)
 }
 
 func TestGetByCity_APIError(t *testing.T) {
@@ -75,12 +78,12 @@ func TestGetByCity_APIError(t *testing.T) {
 		},
 	}
 
-	weatherService := service.NewWeatherService("mock_api_key", mockClient)
+	weatherService := weather.NewService("mock_api_key", mockClient, &log.Logger{})
 
 	ctx := context.Background()
 	data, err := weatherService.GetByCity(ctx, "London")
 	assert.Error(t, err)
-	assert.Equal(t, service.WeatherData{}, data)
+	assert.Equal(t, models.WeatherData{}, data)
 }
 
 func TestGetByCity_InvalidAPIKey(t *testing.T) {
@@ -93,12 +96,12 @@ func TestGetByCity_InvalidAPIKey(t *testing.T) {
 		},
 	}
 
-	weatherService := service.NewWeatherService("invalid_api_key", mockClient)
+	weatherService := weather.NewService("invalid_api_key", mockClient, &log.Logger{})
 
 	ctx := context.Background()
 	data, err := weatherService.GetByCity(ctx, "London")
 	assert.Error(t, err)
-	assert.Equal(t, service.WeatherData{}, data)
+	assert.Equal(t, models.WeatherData{}, data)
 }
 
 func TestGetByCity_Timeout(t *testing.T) {
@@ -118,12 +121,12 @@ func TestGetByCity_Timeout(t *testing.T) {
 		},
 	}
 
-	weatherService := service.NewWeatherService("mock_api_key", mockClient)
+	weatherService := weather.NewService("mock_api_key", mockClient, &log.Logger{})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	data, err := weatherService.GetByCity(ctx, "London")
 	assert.Error(t, err)
-	assert.Equal(t, service.WeatherData{}, data)
+	assert.Equal(t, models.WeatherData{}, data)
 }

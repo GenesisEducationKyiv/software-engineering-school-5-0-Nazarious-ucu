@@ -1,150 +1,185 @@
+// internal/notifier/notifier_test.go
 package notifier_test
 
 import (
 	"context"
 	"errors"
+	"io"
+	"log"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
 )
 
+const freqTest = "hourly"
+
 type mockRepo struct {
-	subs           []repository.Subscription
-	getErr, updErr error
-	updatedIDs     []int
+	subs       []models.Subscription
+	getErr     error
+	updatedIDs []int
+	mu         sync.Mutex
 }
 
-func (m *mockRepo) GetConfirmed() ([]repository.Subscription, error) {
+func (m *mockRepo) GetConfirmedByFrequency(
+	frequency string,
+	ctx context.Context,
+) ([]models.Subscription, error) {
 	return m.subs, m.getErr
 }
 
 func (m *mockRepo) UpdateLastSent(subscriptionID int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.updatedIDs = append(m.updatedIDs, subscriptionID)
-	return m.updErr
+	return nil
 }
 
-type mockWeatherSvc struct {
-	data       service.WeatherData
+type mockWeather struct {
+	data       models.WeatherData
 	err        error
 	calledWith []string
+	mu         sync.Mutex
 }
 
-func (m *mockWeatherSvc) GetByCity(ctx context.Context, city string) (service.WeatherData, error) {
+func (m *mockWeather) GetByCity(ctx context.Context, city string) (models.WeatherData, error) {
+	m.mu.Lock()
 	m.calledWith = append(m.calledWith, city)
+	m.mu.Unlock()
 	return m.data, m.err
 }
 
-type mockEmailSender struct {
+type mockEmail struct {
 	err          error
 	sentTo       []string
 	sentCity     []string
-	sentForecast []service.WeatherData
+	sentForecast []models.WeatherData
+	wg           *sync.WaitGroup
+	mu           sync.Mutex
 }
 
-func (m *mockEmailSender) SendWeather(to, city string, forecast service.WeatherData) error {
+func (m *mockEmail) SendWeather(to, city string, forecast models.WeatherData) error {
+	if m.wg != nil {
+		defer m.wg.Done()
+	}
+	m.mu.Lock()
 	m.sentTo = append(m.sentTo, to)
 	m.sentCity = append(m.sentCity, city)
 	m.sentForecast = append(m.sentForecast, forecast)
+	m.mu.Unlock()
 	return m.err
 }
 
-func TestShouldSendUpdate(t *testing.T) {
-	now := time.Date(2025, 6, 18, 12, 0, 0, 0, time.UTC)
+func Test_sendOne_Success(t *testing.T) {
+	const (
+		city  = "Kyiv"
+		email = "user@kyiv.ua"
+	)
+	sub := models.Subscription{ID: 1, City: city, Email: email}
 
-	tests := []struct {
-		name     string
-		sub      repository.Subscription
-		wantSend bool
-	}{
-		{"no last sent", repository.Subscription{LastSentAt: nil, Frequency: "hourly"}, true},
-		{"hourly - just sent", repository.Subscription{LastSentAt: ptrTime(now), Frequency: "hourly"}, false},
-		{"hourly - overdue", repository.Subscription{LastSentAt: ptrTime(now.Add(-2 * time.Hour)),
-			Frequency: "hourly"}, true},
-		{"daily - just sent", repository.Subscription{LastSentAt: ptrTime(now), Frequency: "daily"}, false},
-		{"daily - overdue", repository.Subscription{LastSentAt: ptrTime(now.Add(-25 * time.Hour)),
-			Frequency: "daily"}, true},
-		{"unknown freq", repository.Subscription{LastSentAt: ptrTime(now.Add(-100 * time.Hour)),
-			Frequency: "weekly"}, false},
+	mockR := &mockRepo{}
+	mockW := &mockWeather{
+		data: models.WeatherData{City: city, Temperature: 5.0, Condition: "Sunny"},
 	}
+	mockE := &mockEmail{}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			n := notifier.Notifier{}
-			got := n.ShouldSendUpdate(tc.sub, now)
-			assert.Equal(t, tc.wantSend, got)
-		})
-	}
+	n := notifier.New(mockR, mockW, mockE, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
+
+	err := n.SendOne(context.Background(), sub)
+	assert.NoError(t, err)
+
+	assert.Equal(t, []string{city}, mockW.calledWith)
+	assert.Equal(t, []string{email}, mockE.sentTo)
+	assert.Equal(t, []string{city}, mockE.sentCity)
+	assert.Equal(t,
+		[]models.WeatherData{{City: city, Temperature: 5.0, Condition: "Sunny"}},
+		mockE.sentForecast,
+	)
+	assert.Equal(t, []int{1}, mockR.updatedIDs)
 }
 
-func ptrTime(t time.Time) *time.Time { return &t }
+func Test_sendOne_Errors(t *testing.T) {
+	const city = "Lviv"
 
-func TestSendWeatherUpdate(t *testing.T) {
-	const city = "Kyiv"
-	const emailAddr = "user@kyiv.ua"
+	baseSub := models.Subscription{ID: 2, City: city, Email: "x"}
 
-	baseSub := repository.Subscription{ID: 42, Email: emailAddr, City: city}
+	mockR1 := &mockRepo{}
+	mockW1 := &mockWeather{err: errors.New("api down")}
+	mockE1 := &mockEmail{wg: &sync.WaitGroup{}}
 
-	t.Run("success path", func(t *testing.T) {
-		mockRepo := &mockRepo{}
-		mockW := &mockWeatherSvc{
-			data: service.WeatherData{City: city, Temperature: 10.0, Condition: "Clear"},
-		}
-		mockEmail := &mockEmailSender{}
+	n1 := notifier.New(mockR1, mockW1, mockE1, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
+	err1 := n1.SendOne(context.Background(), baseSub)
+	assert.Error(t, err1, "should return an error on incorrect GetByCity")
+	assert.Empty(t, mockE1.sentTo, "must not send email on GetByCity error")
+	assert.Empty(t, mockR1.updatedIDs, "must not update LastSent on GetByCity error")
 
-		n := notifier.Notifier{
-			Repo:           mockRepo,
-			WeatherService: mockW,
-			EmailService:   mockEmail,
-		}
+	mockR2 := &mockRepo{}
+	mockW2 := &mockWeather{data: models.WeatherData{City: city}}
+	wg2 := &sync.WaitGroup{}
+	wg2.Add(1)
+	mockE2 := &mockEmail{err: errors.New("smtp fail"), wg: wg2}
 
-		err := n.SendWeatherUpdate(baseSub)
-		assert.NoError(t, err)
+	n2 := notifier.New(mockR2, mockW2, mockE2, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
+	err2 := n2.SendOne(context.Background(), baseSub)
+	wg2.Wait()
+	assert.Error(t, err2)
+	assert.Empty(t, mockR2.updatedIDs)
+}
 
-		assert.Equal(t, []string{city}, mockW.calledWith)
+func Test_runDue_Success(t *testing.T) {
+	const city1 = "Odesa"
+	const city2 = "Kharkiv"
 
-		assert.Equal(t, []string{emailAddr}, mockEmail.sentTo)
-		assert.Equal(t, []string{city}, mockEmail.sentCity)
-		assert.Equal(t, []service.WeatherData{{City: city, Temperature: 10.0, Condition: "Clear"}},
-			mockEmail.sentForecast)
+	subs := []models.Subscription{
+		{ID: 10, City: city1, Email: "a"},
+		{ID: 20, City: city2, Email: "b"},
+	}
 
-		assert.Equal(t, []int{42}, mockRepo.updatedIDs)
-	})
+	mockR := &mockRepo{subs: subs}
+	mockW := &mockWeather{
+		data: models.WeatherData{City: "ignored"},
+	}
+	wg := &sync.WaitGroup{}
+	wg.Add(len(subs))
+	mockE := &mockEmail{wg: wg}
 
-	t.Run("weather fetch error", func(t *testing.T) {
-		mockRepo := &mockRepo{}
-		mockW := &mockWeatherSvc{err: errors.New("api down")}
-		mockEmail := &mockEmailSender{}
+	n := notifier.New(mockR, mockW, mockE, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
 
-		n := notifier.Notifier{
-			Repo:           mockRepo,
-			WeatherService: mockW,
-			EmailService:   mockEmail,
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	n.RunDue(ctx, freqTest)
 
-		err := n.SendWeatherUpdate(baseSub)
-		assert.Error(t, err, "should return weather error")
+	wg.Wait()
 
-		assert.Empty(t, mockEmail.sentTo)
-		assert.Empty(t, mockRepo.updatedIDs)
-	})
+	assert.ElementsMatch(t,
+		[]string{city1, city2},
+		mockW.calledWith,
+		"should call GetByCity for each subscription",
+	)
+	assert.ElementsMatch(t,
+		[]string{"a", "b"},
+		mockE.sentTo,
+		"should send emails to each subscription",
+	)
+	assert.ElementsMatch(t,
+		[]int{10, 20},
+		mockR.updatedIDs,
+		"should update LastSent for each subscription",
+	)
+}
 
-	t.Run("email send error", func(t *testing.T) {
-		mockRepo := &mockRepo{}
-		mockW := &mockWeatherSvc{data: service.WeatherData{City: city}}
-		mockEmail := &mockEmailSender{err: errors.New("smtp not available")}
+func Test_runDue_FetchError(t *testing.T) {
+	mockR := &mockRepo{getErr: errors.New("db down")}
+	wg := &sync.WaitGroup{}
+	mockE := &mockEmail{wg: wg}
+	mockW := &mockWeather{}
 
-		n := notifier.Notifier{
-			Repo:           mockRepo,
-			WeatherService: mockW,
-			EmailService:   mockEmail,
-		}
+	n := notifier.New(mockR, mockW, mockE, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
 
-		err := n.SendWeatherUpdate(baseSub)
-		assert.Error(t, err, "should return email error")
-		assert.Empty(t, mockRepo.updatedIDs)
-	})
+	n.RunDue(context.Background(), freqTest)
+	assert.Empty(t, mockR.updatedIDs)
 }
