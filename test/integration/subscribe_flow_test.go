@@ -65,7 +65,10 @@ func TestPostSubscribe(t *testing.T) {
 			var req *http.Request
 			ctx := context.Background()
 			req, err = http.NewRequestWithContext(ctx, http.MethodPost,
-				testServerURL+"api/subscribe", strings.NewReader(form.Encode()))
+				testServerURL+"/api/subscribe", strings.NewReader(form.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			log.Println(strings.NewReader(form.Encode()))
 
 			resp, err := http.DefaultClient.Do(req)
 			assert.NoError(t, err)
