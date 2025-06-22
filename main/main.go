@@ -13,7 +13,11 @@ import (
 // @host localhost:8080
 // @BasePath /api/
 func main() {
-	cfg := config.NewConfig()
+	cfg, err := config.NewConfig()
+
+	if err != nil {
+		log.Panicf("failed to load configuration: %v", err)
+	}
 
 	logger := log.New(log.Writer(), "WeatherSubscriptionAPI: ", log.LstdFlags)
 
