@@ -68,7 +68,7 @@ func (a *App) Init() ServiceContainer {
 	apiServer := &http.Server{
 		Addr:        a.cfg.Server.Address,
 		Handler:     router,
-		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout),
+		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout) * time.Second,
 	}
 
 	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
