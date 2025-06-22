@@ -87,7 +87,7 @@ func (a *App) Init() ServiceContainer {
 		subRepository:       *subRepository,
 		notificator:         notificator,
 
-		router: gin.Default(),
+		router: router,
 		srv:    apiServer,
 		db:     db,
 	}
