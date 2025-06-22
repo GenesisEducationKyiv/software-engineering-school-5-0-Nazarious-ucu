@@ -117,3 +117,38 @@ func (r *SubscriptionRepository) UpdateLastSent(subscriptionID int) error {
 	)
 	return err
 }
+
+func (r *SubscriptionRepository) GetConfirmedByFrequency(frequency string) ([]Subscription, error) {
+	rows, err := r.DB.Query(`
+		SELECT id, email, city, frequency, last_sent
+		FROM subscriptions
+		WHERE confirmed = 1 AND unsubscribed = 0 AND frequency = ?`, frequency,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			r.logger.Println(err)
+		}
+	}(rows)
+
+	var subs []Subscription
+	for rows.Next() {
+		var sub Subscription
+		var lastSent sql.NullTime
+
+		if err := rows.Scan(&sub.ID, &sub.Email, &sub.City, &sub.Frequency, &lastSent); err != nil {
+			return nil, err
+		}
+
+		if lastSent.Valid {
+			sub.LastSentAt = &lastSent.Time
+		}
+
+		subs = append(subs, sub)
+	}
+
+	return subs, rows.Err()
+}

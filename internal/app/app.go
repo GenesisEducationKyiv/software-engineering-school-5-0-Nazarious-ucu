@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"log"
@@ -24,6 +25,8 @@ import (
 	swagger "github.com/swaggo/gin-swagger"
 )
 
+const timeoutDuration = 5 * time.Second
+
 type App struct {
 	cfg config.Config
 	log *log.Logger
@@ -33,6 +36,7 @@ type ServiceContainer struct {
 	weatherService      *service.Service
 	subscriptionService *subscriptions.Service
 	emailService        *email.Service
+	notificator         *notifier.Notifier
 	subRepository       repository.SubscriptionRepository
 
 	router *gin.Engine
@@ -70,12 +74,18 @@ func (a *App) Init() ServiceContainer {
 	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
 	subRepository := repository.NewSubscriptionRepository(db, a.log)
 	emailService := email.NewService(smtpService)
+	weatherService := service.NewService(a.cfg.WeatherAPIKey, &http.Client{}, a.log)
+	notificator := notifier.New(subRepository,
+		weatherService,
+		emailService,
+		a.log)
 
 	srvContainer := ServiceContainer{
-		weatherService:      service.NewService(a.cfg.WeatherAPIKey, &http.Client{}, a.log),
+		weatherService:      weatherService,
 		subscriptionService: subscriptions.NewService(subRepository, emailService),
 		emailService:        emailService,
 		subRepository:       *subRepository,
+		notificator:         notificator,
 
 		router: gin.Default(),
 		srv:    apiServer,
@@ -97,11 +107,6 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 	subHandler := subscription.NewHandler(srvContainer.subscriptionService)
 	weatherHandler := weather.NewHandler(srvContainer.weatherService)
 
-	notificator := notifier.New(&srvContainer.subRepository,
-		srvContainer.weatherService,
-		srvContainer.emailService,
-		a.log)
-
 	api := srvContainer.router.Group("/api")
 	{
 		api.GET("/weather", weatherHandler.GetWeather)
@@ -111,7 +116,7 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 	}
 	srvContainer.router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
 
-	notificator.StartWeatherNotifier()
+	srvContainer.notificator.Start(context.Background())
 
 	if err := srvContainer.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
@@ -120,16 +125,27 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 }
 
 func (a *App) Stop(srvContainer ServiceContainer) error {
-	a.log.Println("Stopping server on", a.cfg.Server.Address)
+	a.log.Println("Stopping application…")
 
-	// Graceful shutdown
-	defer func(db *sql.DB) {
-		if err := db.Close(); err != nil {
-			log.Panicf("failed to close database connection: %v", err)
-		}
-	}(srvContainer.db)
+	srvContainer.notificator.Stop()
+	a.log.Println("Notifier stopped")
 
-	a.log.Println("Server stopped successfully")
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	defer cancel()
+
+	if err := srvContainer.srv.Shutdown(ctx); err != nil {
+		a.log.Println("HTTP shutdown error:", err)
+	} else {
+		a.log.Println("HTTP server stopped")
+	}
+
+	if err := srvContainer.db.Close(); err != nil {
+		a.log.Println("DB close error:", err)
+	} else {
+		a.log.Println("Database closed")
+	}
+
+	a.log.Println("Shutdown complete")
 	return nil
 }
 

@@ -9,15 +9,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Servicer interface {
+type servicer interface {
 	GetByCity(ctx context.Context, city string) (models.WeatherData, error)
 }
 
 type Handler struct {
-	Service Servicer
+	Service servicer
 }
 
-func NewHandler(svc Servicer) *Handler {
+func NewHandler(svc servicer) *Handler {
 	return &Handler{Service: svc}
 }
 
