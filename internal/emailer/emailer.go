@@ -13,19 +13,21 @@ type SMTPService struct {
 	Port     string
 	Password string
 	From     string
+	logger   *log.Logger
 }
 
-func NewSMTPService(cfg *config.Config) *SMTPService {
+func NewSMTPService(cfg *config.Config, logger *log.Logger) *SMTPService {
 	svc := &SMTPService{
 		User:     cfg.User,
 		Host:     cfg.Host,
 		Port:     cfg.Port,
 		Password: cfg.Password,
 		From:     cfg.From,
+		logger:   logger,
 	}
 
 	if svc.User == "" || svc.Host == "" || svc.Port == "" || svc.Password == "" || svc.From == "" {
-		log.Printf("SMTP credentials are not fully set: %+v\n", svc)
+		logger.Printf("SMTP credentials are not fully set: %+v\n", svc)
 		return nil
 	}
 	return svc
@@ -33,7 +35,7 @@ func NewSMTPService(cfg *config.Config) *SMTPService {
 
 func (e *SMTPService) Send(to, subject, additionalHeaders, body string) error {
 	if e.Host == "" || e.Port == "" || e.User == "" || e.Password == "" {
-		log.Println("SMTP credentials are invalid")
+		e.logger.Println("SMTP credentials are invalid")
 	}
 
 	auth := smtp.PlainAuth("", e.User, e.Password, e.Host)

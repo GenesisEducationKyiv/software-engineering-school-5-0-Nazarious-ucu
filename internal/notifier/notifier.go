@@ -30,25 +30,29 @@ type Notifier struct {
 	Repo           SubscriptionRepository
 	WeatherService weather.Servicer
 	EmailService   EmailSender
+	logger         *log.Logger
 }
 
 func New(repo SubscriptionRepository,
-	weatherService weather.Servicer, emailService EmailSender,
+	weatherService weather.Servicer,
+	emailService EmailSender,
+	logger *log.Logger,
 ) *Notifier {
 	return &Notifier{
 		Repo:           repo,
 		WeatherService: weatherService,
 		EmailService:   emailService,
+		logger:         logger,
 	}
 }
 
 func (n *Notifier) StartWeatherNotifier() {
 	go func() {
 		for {
-			log.Println("Checking for subscriptions to send weather updates")
+			n.logger.Println("Checking for subscriptions to send weather updates")
 			subs, err := n.Repo.GetConfirmed()
 			if err != nil {
-				log.Println("DB query error:", err)
+				n.logger.Println("DB query error:", err)
 				time.Sleep(time.Minute)
 				continue
 			}
@@ -58,7 +62,7 @@ func (n *Notifier) StartWeatherNotifier() {
 				if n.shouldSendUpdate(sub, now) {
 					err := n.sendWeatherUpdate(sub)
 					if err != nil {
-						log.Println("DB query error:", err)
+						n.logger.Println("DB query error:", err)
 					}
 				}
 			}
@@ -91,12 +95,12 @@ func (n *Notifier) sendWeatherUpdate(sub repository.Subscription) error {
 
 	forecast, err := n.WeatherService.GetByCity(ctx, sub.City)
 	if err != nil {
-		log.Println("Weather fetch error for", sub.City, ":", err)
+		n.logger.Println("Weather fetch error for", sub.City, ":", err)
 		return err
 	}
 
 	if err := n.EmailService.SendWeather(sub.Email, sub.City, forecast); err != nil {
-		log.Println("Email error:", err)
+		n.logger.Println("Email error:", err)
 		return err
 	}
 

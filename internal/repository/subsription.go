@@ -19,11 +19,12 @@ type Subscription struct {
 }
 
 type SubscriptionRepository struct {
-	DB *sql.DB
+	logger *log.Logger
+	DB     *sql.DB
 }
 
-func NewSubscriptionRepository(db *sql.DB) *SubscriptionRepository {
-	return &SubscriptionRepository{DB: db}
+func NewSubscriptionRepository(db *sql.DB, logger *log.Logger) *SubscriptionRepository {
+	return &SubscriptionRepository{DB: db, logger: logger}
 }
 
 func (r *SubscriptionRepository) Create(email, city, token string, frequency string) error {
@@ -70,7 +71,7 @@ func (r *SubscriptionRepository) GetConfirmed() ([]Subscription, error) {
 	defer func(rows *sql.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Println(err)
+			r.logger.Println(err)
 		}
 	}(rows)
 

@@ -18,10 +18,11 @@ type HTTPClient interface {
 type Service struct {
 	APIKey string
 	client HTTPClient
+	logger *log.Logger
 }
 
-func NewService(apiKey string, httpClient HTTPClient) *Service {
-	return &Service{APIKey: apiKey, client: httpClient}
+func NewService(apiKey string, httpClient HTTPClient, logger *log.Logger) *Service {
+	return &Service{APIKey: apiKey, client: httpClient, logger: logger}
 }
 
 func (s *Service) GetByCity(ctx context.Context, city string) (models.Data, error) {
@@ -40,7 +41,7 @@ func (s *Service) GetByCity(ctx context.Context, city string) (models.Data, erro
 	defer func(body io.ReadCloser) {
 		err := body.Close()
 		if err != nil {
-			log.Println("failed to close response body: %w", err)
+			s.logger.Println("failed to close response body: %w", err)
 		}
 	}(resp.Body)
 

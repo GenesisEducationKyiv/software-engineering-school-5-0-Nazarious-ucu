@@ -67,12 +67,12 @@ func (a *App) Init() ServiceContainer {
 		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout),
 	}
 
-	smtpService := emailer.NewSMTPService(&a.cfg)
-	subRepository := repository.NewSubscriptionRepository(db)
+	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
+	subRepository := repository.NewSubscriptionRepository(db, a.log)
 	emailService := email.NewService(smtpService)
 
 	srvContainer := ServiceContainer{
-		weatherService:      service.NewService(a.cfg.WeatherAPIKey, &http.Client{}),
+		weatherService:      service.NewService(a.cfg.WeatherAPIKey, &http.Client{}, a.log),
 		subscriptionService: subscriptions.NewService(subRepository, emailService),
 		emailService:        emailService,
 		subRepository:       *subRepository,
@@ -98,7 +98,9 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 	weatherHandler := weather.NewHandler(srvContainer.weatherService)
 
 	notificator := notifier.New(&srvContainer.subRepository,
-		srvContainer.weatherService, srvContainer.emailService)
+		srvContainer.weatherService,
+		srvContainer.emailService,
+		a.log)
 
 	api := srvContainer.router.Group("/api")
 	{
