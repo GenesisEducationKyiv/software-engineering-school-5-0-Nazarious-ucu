@@ -33,7 +33,8 @@ type Notifier struct {
 }
 
 func New(repo SubscriptionRepository,
-	weatherService weather.WeatherServicer, emailService EmailSender) *Notifier {
+	weatherService weather.WeatherServicer, emailService EmailSender,
+) *Notifier {
 	return &Notifier{
 		Repo:           repo,
 		WeatherService: weatherService,

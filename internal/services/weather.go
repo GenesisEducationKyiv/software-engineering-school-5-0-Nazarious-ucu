@@ -7,8 +7,11 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 )
+
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
 
 type WeatherData struct {
 	City        string  `json:"city"`
@@ -18,13 +21,12 @@ type WeatherData struct {
 
 type WeatherService struct {
 	APIKey string
-	client *http.Client
+	client HTTPClient
 }
 
-const timeoutTime = 10 * time.Second
-
-func NewWeatherService(apiKey string) *WeatherService {
-	return &WeatherService{APIKey: apiKey, client: &http.Client{Timeout: timeoutTime}}
+// const timeoutTime = 10 * time.Second
+func NewWeatherService(apiKey string, httpClient HTTPClient) *WeatherService {
+	return &WeatherService{APIKey: apiKey, client: httpClient}
 }
 
 func (s *WeatherService) GetByCity(ctx context.Context, city string) (WeatherData, error) {

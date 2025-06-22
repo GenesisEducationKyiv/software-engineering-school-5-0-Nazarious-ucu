@@ -3,18 +3,19 @@ package app
 import (
 	"database/sql"
 	"errors"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
-	"github.com/pressly/goose/v3"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
+	"github.com/pressly/goose/v3"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/emailer"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services"
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	swagger "github.com/swaggo/gin-swagger"
@@ -93,7 +94,8 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 	subHandler := subscription.NewSubscriptionHandler(srvContainer.subscriptionService)
 	weatherHandler := weather.NewHandler(srvContainer.weatherService)
 
-	notificator := notifier.New(&srvContainer.subRepository, srvContainer.weatherService, srvContainer.emailService)
+	notificator := notifier.New(&srvContainer.subRepository,
+		srvContainer.weatherService, srvContainer.emailService)
 
 	api := srvContainer.router.Group("/api")
 	{
