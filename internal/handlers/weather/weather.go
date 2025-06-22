@@ -4,20 +4,20 @@ import (
 	"context"
 	"net/http"
 
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
+	model "github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-type WeatherServicer interface {
-	GetByCity(ctx context.Context, city string) (service.WeatherData, error)
+type Servicer interface {
+	GetByCity(ctx context.Context, city string) (model.Data, error)
 }
 
 type Handler struct {
-	Service WeatherServicer
+	Service Servicer
 }
 
-func NewHandler(svc WeatherServicer) *Handler {
+func NewHandler(svc Servicer) *Handler {
 	return &Handler{Service: svc}
 }
 

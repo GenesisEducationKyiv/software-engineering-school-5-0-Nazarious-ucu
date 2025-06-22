@@ -1,27 +1,29 @@
-package service
+package email
 
 import (
 	"bytes"
 	"fmt"
 	"html/template"
 	"strconv"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 )
 
 type Emailer interface {
 	Send(to, subject, additionalHeaders, body string) error
 }
 
-type EmailService struct {
+type Service struct {
 	emailer Emailer
 }
 
-func NewEmailService(service Emailer) *EmailService {
-	return &EmailService{
+func NewService(service Emailer) *Service {
+	return &Service{
 		emailer: service,
 	}
 }
 
-func (e *EmailService) SendConfirmation(toEmail, token string) error {
+func (e *Service) SendConfirmation(toEmail, token string) error {
 	tmpl, err := template.ParseFiles("internal/templates/confirm_email.html")
 	if err != nil {
 		return err
@@ -42,7 +44,7 @@ func (e *EmailService) SendConfirmation(toEmail, token string) error {
 		body.String())
 }
 
-func (e *EmailService) SendWeather(toEmail, city string, forecast WeatherData) error {
+func (e *Service) SendWeather(toEmail, city string, forecast models.Data) error {
 	temp := strconv.FormatFloat(forecast.Temperature, 'f', 1, 64)
 	body := "Weather update for " + city + ":\n" +
 		"Temperature: " + temp + "°C\n" +

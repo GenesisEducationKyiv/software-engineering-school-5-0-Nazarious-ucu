@@ -7,6 +7,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/subscriptions"
+	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
 	"github.com/pressly/goose/v3"
@@ -15,7 +19,6 @@ import (
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/emailer"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	swagger "github.com/swaggo/gin-swagger"
@@ -27,9 +30,9 @@ type App struct {
 }
 
 type ServiceContainer struct {
-	weatherService      *service.WeatherService
-	subscriptionService *service.SubscriptionService
-	emailService        *service.EmailService
+	weatherService      *service.Service
+	subscriptionService *subscriptions.Service
+	emailService        *email.Service
 	subRepository       repository.SubscriptionRepository
 
 	router *gin.Engine
@@ -66,11 +69,11 @@ func (a *App) Init() ServiceContainer {
 
 	smtpService := emailer.NewSMTPService(&a.cfg)
 	subRepository := repository.NewSubscriptionRepository(db)
-	emailService := service.NewEmailService(smtpService)
+	emailService := email.NewService(smtpService)
 
 	srvContainer := ServiceContainer{
-		weatherService:      service.NewWeatherService(a.cfg.WeatherAPIKey, &http.Client{}),
-		subscriptionService: service.NewSubscriptionService(subRepository, emailService),
+		weatherService:      service.NewService(a.cfg.WeatherAPIKey, &http.Client{}),
+		subscriptionService: subscriptions.NewService(subRepository, emailService),
 		emailService:        emailService,
 		subRepository:       *subRepository,
 
@@ -91,7 +94,7 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 		}
 	}()
 
-	subHandler := subscription.NewSubscriptionHandler(srvContainer.subscriptionService)
+	subHandler := subscription.NewHandler(srvContainer.subscriptionService)
 	weatherHandler := weather.NewHandler(srvContainer.weatherService)
 
 	notificator := notifier.New(&srvContainer.subRepository,

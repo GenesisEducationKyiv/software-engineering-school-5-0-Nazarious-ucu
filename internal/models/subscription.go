@@ -1,4 +1,4 @@
-package model
+package models
 
 type Subscription struct {
 	ID           int    `json:"id"`

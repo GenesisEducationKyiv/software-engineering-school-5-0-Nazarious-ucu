@@ -1,4 +1,4 @@
-package service
+package subscriptions
 
 import (
 	"crypto/rand"
@@ -17,21 +17,21 @@ type SubscriptionRepository interface {
 	Unsubscribe(token string) (bool, error)
 }
 
-type SubscriptionService struct {
+type Service struct {
 	Repo    SubscriptionRepository
 	Service ConfirmationEmailer
 }
 
-func NewSubscriptionService(repo SubscriptionRepository,
+func NewService(repo SubscriptionRepository,
 	emailService ConfirmationEmailer,
-) *SubscriptionService {
-	return &SubscriptionService{
+) *Service {
+	return &Service{
 		Repo:    repo,
 		Service: emailService,
 	}
 }
 
-func (s *SubscriptionService) Subscribe(email, city string, frequency string) error {
+func (s *Service) Subscribe(email, city string, frequency string) error {
 	tokenBytes := make([]byte, bytesNum)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		return err
@@ -45,10 +45,10 @@ func (s *SubscriptionService) Subscribe(email, city string, frequency string) er
 	return s.Service.SendConfirmation(email, token)
 }
 
-func (s *SubscriptionService) Confirm(token string) (bool, error) {
+func (s *Service) Confirm(token string) (bool, error) {
 	return s.Repo.Confirm(token)
 }
 
-func (s *SubscriptionService) Unsubscribe(token string) (bool, error) {
+func (s *Service) Unsubscribe(token string) (bool, error) {
 	return s.Repo.Unsubscribe(token)
 }

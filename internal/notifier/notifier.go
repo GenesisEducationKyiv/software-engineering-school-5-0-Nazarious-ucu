@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services"
 )
 
 const (
@@ -23,17 +23,17 @@ type SubscriptionRepository interface {
 }
 
 type EmailSender interface {
-	SendWeather(to, city string, forecast service.WeatherData) error
+	SendWeather(to, city string, forecast models.Data) error
 }
 
 type Notifier struct {
 	Repo           SubscriptionRepository
-	WeatherService weather.WeatherServicer
+	WeatherService weather.Servicer
 	EmailService   EmailSender
 }
 
 func New(repo SubscriptionRepository,
-	weatherService weather.WeatherServicer, emailService EmailSender,
+	weatherService weather.Servicer, emailService EmailSender,
 ) *Notifier {
 	return &Notifier{
 		Repo:           repo,
