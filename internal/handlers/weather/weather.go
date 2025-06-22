@@ -28,7 +28,7 @@ func NewHandler(svc servicer) *Handler {
 // @Accept json
 // @Produce json
 // @Param city query string true "City name"
-// @Success 200 {object} service.WeatherData
+// @Success 200 {object} models.WeatherData
 // @Failure 400
 // @Failure 500
 // @Router /weather [get]
