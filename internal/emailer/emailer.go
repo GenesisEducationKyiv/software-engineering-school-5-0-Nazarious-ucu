@@ -8,35 +8,37 @@ import (
 )
 
 type SMTPService struct {
-	User     string
-	Host     string
-	Port     string
-	Password string
+	user     string
+	host     string
+	port     string
+	password string
 	From     string
+	logger   *log.Logger
 }
 
-func NewSMTPService(cfg *config.Config) *SMTPService {
+func NewSMTPService(cfg *config.Config, logger *log.Logger) *SMTPService {
 	svc := &SMTPService{
-		User:     cfg.User,
-		Host:     cfg.Host,
-		Port:     cfg.Port,
-		Password: cfg.Password,
-		From:     cfg.From,
+		user:     cfg.Email.User,
+		host:     cfg.Email.Host,
+		port:     cfg.Email.Port,
+		password: cfg.Email.Password,
+		From:     cfg.Email.From,
+		logger:   logger,
 	}
 
-	if svc.Host == "" || svc.Port == "" || svc.From == "" {
-		log.Printf("SMTP credentials are not fully set: %+v\n", svc)
+	if svc.user == "" || svc.host == "" || svc.port == "" || svc.password == "" || svc.From == "" {
+		logger.Printf("SMTP credentials are not fully set: %+v\n", svc)
 		return nil
 	}
 	return svc
 }
 
 func (e *SMTPService) Send(to, subject, additionalHeaders, body string) error {
-	if e.Host == "" || e.Port == "" {
-		log.Println("SMTP credentials are invalid")
+	if e.host == "" || e.port == "" || e.user == "" || e.password == "" {
+		e.logger.Println("SMTP credentials are invalid")
 	}
 
-	auth := smtp.PlainAuth("", e.User, e.Password, e.Host)
+	auth := smtp.PlainAuth("", e.user, e.password, e.host)
 
 	msg := "From: " + e.From + "\n" +
 		"To: " + to + "\n" +
@@ -44,6 +46,6 @@ func (e *SMTPService) Send(to, subject, additionalHeaders, body string) error {
 		additionalHeaders + "\n\n" +
 		body
 
-	addr := e.Host + ":" + e.Port
-	return smtp.SendMail(addr, auth, e.From, []string{to}, []byte(msg))
+	addr := e.host + ":" + e.port
+	return smtp.SendMail(addr, auth, e.user, []string{to}, []byte(msg))
 }

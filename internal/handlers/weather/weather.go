@@ -4,21 +4,21 @@ import (
 	"context"
 	"net/http"
 
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-type WeatherServicer interface {
-	GetByCity(ctx context.Context, city string) (service.WeatherData, error)
+type servicer interface {
+	GetByCity(ctx context.Context, city string) (models.WeatherData, error)
 }
 
 type Handler struct {
-	Service WeatherServicer
+	service servicer
 }
 
-func NewHandler(svc WeatherServicer) *Handler {
-	return &Handler{Service: svc}
+func NewHandler(svc servicer) *Handler {
+	return &Handler{service: svc}
 }
 
 // GetWeather
@@ -28,7 +28,7 @@ func NewHandler(svc WeatherServicer) *Handler {
 // @Accept json
 // @Produce json
 // @Param city query string true "City name"
-// @Success 200 {object} service.WeatherData
+// @Success 200 {object} models.WeatherData
 // @Failure 400
 // @Failure 500
 // @Router /weather [get]
@@ -40,7 +40,7 @@ func (h *Handler) GetWeather(c *gin.Context) {
 	}
 	ctx := context.Background()
 
-	data, err := h.Service.GetByCity(ctx, city)
+	data, err := h.service.GetByCity(ctx, city)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

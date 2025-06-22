@@ -4,8 +4,6 @@ import (
 	"log"
 	"net/http"
 
-	_ "github.com/Nazarious-ucu/weather-subscription-api/internal/models"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,12 +13,12 @@ type subscriber interface {
 	Unsubscribe(token string) (bool, error)
 }
 
-type SubscriptionHandler struct {
+type Handler struct {
 	Service subscriber
 }
 
-func NewHandler(svc subscriber) *SubscriptionHandler {
-	return &SubscriptionHandler{Service: svc}
+func NewHandler(svc subscriber) *Handler {
+	return &Handler{Service: svc}
 }
 
 // Subscribe
@@ -36,7 +34,7 @@ func NewHandler(svc subscriber) *SubscriptionHandler {
 // @Failure 404
 // @Failure 500
 // @Router /subscribe [post]
-func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
+func (h *Handler) Subscribe(c *gin.Context) {
 	log.Printf("email: %s, city: %s, frequency: %s",
 		c.PostForm("email"), c.PostForm("city"), c.PostForm("frequency"))
 	email := c.PostForm("email")
@@ -69,7 +67,7 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 // @Failure 400
 // @Failure 404
 // @Router /confirm/{token} [get]
-func (h *SubscriptionHandler) Confirm(c *gin.Context) {
+func (h *Handler) Confirm(c *gin.Context) {
 	token := c.Param("token")
 	ok, err := h.Service.Confirm(token)
 	if err != nil {
@@ -92,7 +90,7 @@ func (h *SubscriptionHandler) Confirm(c *gin.Context) {
 // @Failure 400
 // @Failure 404
 // @Router /unsubscribe/{token} [get]
-func (h *SubscriptionHandler) Unsubscribe(c *gin.Context) {
+func (h *Handler) Unsubscribe(c *gin.Context) {
 	token := c.Param("token")
 	ok, err := h.Service.Unsubscribe(token)
 	if err != nil {
