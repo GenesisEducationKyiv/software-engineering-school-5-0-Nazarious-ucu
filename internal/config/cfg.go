@@ -1,44 +1,30 @@
 package config
 
 import (
-	"os"
-	"strconv"
+	"github.com/kelseyhightower/envconfig"
 )
 
 type Server struct {
-	Address     string
-	ReadTimeout int
+	Address     string `envconfig:"SERVER_ADDRESS" default:":8080"`
+	ReadTimeout int    `envconfig:"SERVER_TIMEOUT" default:"10"`
 }
 
 type Config struct {
-	WeatherAPIKey string
+	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
 
-	User     string
-	Host     string
-	Port     string
-	Password string
-	From     string
+	User     string `envconfig:"EMAIL_USER"     required:"true"`
+	Host     string `envconfig:"EMAIL_HOST"     required:"true"`
+	Port     string `envconfig:"EMAIL_PORT"     required:"true"`
+	Password string `envconfig:"EMAIL_PASSWORD" required:"true"`
+	From     string `envconfig:"EMAIL_FROM"     required:"true"`
 
 	Server Server
 }
 
-func NewConfig() *Config {
-	timeout, err := strconv.Atoi(os.Getenv("SERVER_TIMEOUT"))
-	if err != nil {
-		timeout = 10
+func NewConfig() (*Config, error) {
+	var cfg Config
+	if err := envconfig.Process("", &cfg); err != nil {
+		return nil, err
 	}
-	return &Config{
-		WeatherAPIKey: os.Getenv("WEATHER_API_KEY"),
-
-		User:     os.Getenv("EMAIL_USER"),
-		Host:     os.Getenv("EMAIL_HOST"),
-		Port:     os.Getenv("EMAIL_PORT"),
-		Password: os.Getenv("EMAIL_PASSWORD"),
-		From:     os.Getenv("EMAIL_FROM"),
-
-		Server: Server{
-			Address:     os.Getenv("SERVER_ADDRESS"),
-			ReadTimeout: timeout, // Default read timeout in seconds
-		},
-	}
+	return &cfg, nil
 }
