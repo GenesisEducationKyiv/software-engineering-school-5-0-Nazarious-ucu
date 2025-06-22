@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"time"
@@ -112,8 +113,9 @@ func (r *SubscriptionRepository) UpdateLastSent(subscriptionID int) error {
 	return err
 }
 
-func (r *SubscriptionRepository) GetConfirmedByFrequency(frequency string) ([]models.Subscription, error) {
-	rows, err := r.DB.Query(`
+func (r *SubscriptionRepository) GetConfirmedByFrequency(frequency string,
+	ctx context.Context) ([]models.Subscription, error) {
+	rows, err := r.DB.QueryContext(ctx, `
 		SELECT id, email, city, frequency, last_sent
 		FROM subscriptions
 		WHERE confirmed = 1 AND unsubscribed = 0 AND frequency = ?`, frequency,

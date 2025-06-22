@@ -18,11 +18,11 @@ type SMTPService struct {
 
 func NewSMTPService(cfg *config.Config, logger *log.Logger) *SMTPService {
 	svc := &SMTPService{
-		user:     cfg.User,
-		host:     cfg.Host,
-		port:     cfg.Port,
-		password: cfg.Password,
-		From:     cfg.From,
+		user:     cfg.Email.User,
+		host:     cfg.Email.Host,
+		port:     cfg.Email.Port,
+		password: cfg.Email.Password,
+		From:     cfg.Email.From,
 		logger:   logger,
 	}
 

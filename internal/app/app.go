@@ -121,6 +121,14 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 	if err := srvContainer.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
+
+	log.Println("Application started successfully on", a.cfg.Server.Address)
+	defer func() {
+		if err := a.Stop(srvContainer); err != nil {
+			log.Panicf("failed to shutdown application: %v", err)
+		}
+		log.Println("Application shutdown successfully")
+	}()
 	return nil
 }
 

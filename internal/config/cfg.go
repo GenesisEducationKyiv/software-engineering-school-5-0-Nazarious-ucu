@@ -9,16 +9,18 @@ type Server struct {
 	ReadTimeout int    `envconfig:"SERVER_TIMEOUT" default:"10"`
 }
 
-type Config struct {
-	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
-
+type Email struct {
 	User     string `envconfig:"EMAIL_USER"     required:"true"`
 	Host     string `envconfig:"EMAIL_HOST"     required:"true"`
 	Port     string `envconfig:"EMAIL_PORT"     required:"true"`
 	Password string `envconfig:"EMAIL_PASSWORD" required:"true"`
 	From     string `envconfig:"EMAIL_FROM"     required:"true"`
+}
 
-	Server Server
+type Config struct {
+	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
+	Server        Server
+	Email         Email
 }
 
 func NewConfig() (*Config, error) {

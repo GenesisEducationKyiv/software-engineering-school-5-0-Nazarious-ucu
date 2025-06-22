@@ -19,7 +19,7 @@ const (
 type subscriptionRepository interface {
 	GetConfirmed() ([]models.Subscription, error)
 
-	GetConfirmedByFrequency(frequency string) ([]models.Subscription, error)
+	GetConfirmedByFrequency(frequency string, ctx context.Context) ([]models.Subscription, error)
 	UpdateLastSent(subscriptionID int) error
 }
 
@@ -86,7 +86,7 @@ func (n *Notifier) runDue(ctx context.Context, frequency string) {
 	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 
-	subs, err := n.repo.GetConfirmedByFrequency(frequency)
+	subs, err := n.repo.GetConfirmedByFrequency(frequency, ctx)
 	if err != nil {
 		n.logger.Println("Error fetching due subs:", err)
 		return
