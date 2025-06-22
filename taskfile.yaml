@@ -75,9 +75,9 @@ tasks:
     dotenv:
       - test/.env.test
     cmds:
-      - docker-compose -f test/docker-compose.test.yml up -d
+      - docker compose -f test/docker-compose.test.yml up -d
       - sleep 2
       - go test -tags=integration ./...
-      - docker-compose -f test/docker-compose.test.yml down
+      - docker compose -f test/docker-compose.test.yml down
 
 
