@@ -3,8 +3,6 @@ package subscription
 import (
 	"net/http"
 
-	_ "github.com/Nazarious-ucu/weather-subscription-api/internal/models"
-
 	"github.com/gin-gonic/gin"
 )
 

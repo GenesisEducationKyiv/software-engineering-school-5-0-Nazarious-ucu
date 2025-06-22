@@ -23,7 +23,7 @@ type SubscriptionRepository interface {
 }
 
 type EmailSender interface {
-	SendWeather(to, city string, forecast models.Data) error
+	SendWeather(to, city string, forecast models.WeatherData) error
 }
 
 type Notifier struct {

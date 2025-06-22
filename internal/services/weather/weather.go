@@ -25,18 +25,18 @@ func NewService(apiKey string, httpClient HTTPClient, logger *log.Logger) *Servi
 	return &Service{APIKey: apiKey, client: httpClient, logger: logger}
 }
 
-func (s *Service) GetByCity(ctx context.Context, city string) (models.Data, error) {
+func (s *Service) GetByCity(ctx context.Context, city string) (models.WeatherData, error) {
 	fmt.Println("Getting weather with API token: ", s.APIKey)
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", s.APIKey, city)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return models.Data{}, err
+		return models.WeatherData{}, err
 	}
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return models.Data{}, err
+		return models.WeatherData{}, err
 	}
 	defer func(body io.ReadCloser) {
 		err := body.Close()
@@ -46,7 +46,7 @@ func (s *Service) GetByCity(ctx context.Context, city string) (models.Data, erro
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		return models.Data{}, fmt.Errorf("weather API error: status %d", resp.StatusCode)
+		return models.WeatherData{}, fmt.Errorf("weather API error: status %d", resp.StatusCode)
 	}
 
 	var raw struct {
@@ -62,10 +62,10 @@ func (s *Service) GetByCity(ctx context.Context, city string) (models.Data, erro
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return models.Data{}, err
+		return models.WeatherData{}, err
 	}
 
-	return models.Data{
+	return models.WeatherData{
 		City:        raw.Location.Name,
 		Temperature: raw.Current.TempC,
 		Condition:   raw.Current.Condition.Text,

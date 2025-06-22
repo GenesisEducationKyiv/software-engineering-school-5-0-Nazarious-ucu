@@ -4,13 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	model "github.com/Nazarious-ucu/weather-subscription-api/internal/models"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Servicer interface {
-	GetByCity(ctx context.Context, city string) (model.Data, error)
+	GetByCity(ctx context.Context, city string) (models.WeatherData, error)
 }
 
 type Handler struct {
