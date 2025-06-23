@@ -30,6 +30,7 @@ type NotifierFrequency struct {
 
 type Config struct {
 	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
+	WeatherAPIURL string `envconfig:"WEATHER_API_URL" required:"true"`
 	Server        Server
 	Email         Email
 	DB            Db

@@ -68,6 +68,7 @@ func (h *Handler) Subscribe(c *gin.Context) {
 // @Failure 404
 // @Router /confirm/{token} [get]
 func (h *Handler) Confirm(c *gin.Context) {
+	log.Printf("token: %s", c.Param("token"))
 	token := c.Param("token")
 	ok, err := h.Service.Confirm(token)
 	if err != nil {

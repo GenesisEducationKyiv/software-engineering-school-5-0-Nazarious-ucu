@@ -3,6 +3,7 @@ package weather
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 
@@ -38,10 +39,13 @@ func (h *Handler) GetWeather(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "city query parameter is required"})
 		return
 	}
-	ctx := context.Background()
 
-	data, err := h.service.GetByCity(ctx, city)
+	data, err := h.service.GetByCity(context.Background(), city)
 	if err != nil {
+		if strings.Contains(err.Error(), "status 404") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "City not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

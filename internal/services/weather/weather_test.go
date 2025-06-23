@@ -40,7 +40,8 @@ func TestGetByCity(t *testing.T) {
 		},
 	}
 
-	weatherService := weather.NewService("mock_api_key", mockClient, &log.Logger{})
+	weatherService := weather.NewService("mock_api_key", mockClient, &log.Logger{},
+		"https://api.weatherapi.com/v1/current.json")
 
 	ctx := context.Background()
 	data, err := weatherService.GetByCity(ctx, "London")
@@ -60,7 +61,8 @@ func TestGetByCity_CityNotFound(t *testing.T) {
 		},
 	}
 
-	weatherService := weather.NewService("mock_api_key", mockClient, &log.Logger{})
+	weatherService := weather.NewService("mock_api_key",
+		mockClient, &log.Logger{}, "https://api.weatherapi.com/v1/current.json")
 
 	ctx := context.Background()
 	data, err := weatherService.GetByCity(ctx, "UnknownCity")
@@ -78,7 +80,8 @@ func TestGetByCity_APIError(t *testing.T) {
 		},
 	}
 
-	weatherService := weather.NewService("mock_api_key", mockClient, &log.Logger{})
+	weatherService := weather.NewService("mock_api_key",
+		mockClient, &log.Logger{}, "https://api.weatherapi.com/v1/current.json")
 
 	ctx := context.Background()
 	data, err := weatherService.GetByCity(ctx, "London")
@@ -95,8 +98,8 @@ func TestGetByCity_InvalidAPIKey(t *testing.T) {
 			}, nil
 		},
 	}
-
-	weatherService := weather.NewService("invalid_api_key", mockClient, &log.Logger{})
+	weatherService := weather.NewService("invalid_api_key",
+		mockClient, &log.Logger{}, "https://api.weatherapi.com/v1/current.json")
 
 	ctx := context.Background()
 	data, err := weatherService.GetByCity(ctx, "London")
@@ -120,8 +123,8 @@ func TestGetByCity_Timeout(t *testing.T) {
 			}
 		},
 	}
-
-	weatherService := weather.NewService("mock_api_key", mockClient, &log.Logger{})
+	weatherService := weather.NewService("mock_api_key",
+		mockClient, &log.Logger{}, "https://api.weatherapi.com/v1/current.json")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()

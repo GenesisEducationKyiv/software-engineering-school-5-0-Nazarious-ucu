@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 package integration
 
 import (
@@ -32,13 +29,20 @@ func TestMain(m *testing.M) {
 
 	// Initialize the application
 	cfg, err := config.NewConfig()
-	cfg.Email.Host = "localhost"
-	cfg.Email.Port = "1025"
-	cfg.DB.Source = "test.db"
-
 	if err != nil {
 		log.Panicf("failed to load configuration: %v", err)
 	}
+
+	// Initialize the test server
+	server := NewTestAPIServer()
+
+	defer server.Close()
+
+	cfg.Email.Host = "localhost"
+	cfg.Email.Port = "1025"
+	cfg.DB.Source = "test.db"
+	cfg.WeatherAPIURL = server.URL
+
 	application := app.New(*cfg, log.Default())
 	srvContainer := application.Init()
 
@@ -99,37 +103,34 @@ func resetTables(db *sql.DB) error {
 	return nil
 }
 
-func _() *httptest.Server {
+func NewTestAPIServer() *httptest.Server {
 	fakeWeatherData := `{
-		"location": {
-			"name": "Test City"
-		},
-		"current": {
-			"temp_c": 20.0,
-			"condition": {
-				"text": "Sunny"
-			}
-		}
-	}`
-
+       "location": {"name":"H_E_L_L"},
+       "current": {"temp_c":10000.0, "condition": {"text":"Sunny"}}
+   }`
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Query().Get("q") != "incorrectCity":
+		key := r.URL.Query().Get("key")
+		city := r.URL.Query().Get("q")
+
+		// 1) Якщо невірне місто — 404
+		if city == "InvalidCity" {
 			http.Error(w, "City not found", http.StatusNotFound)
-		case r.URL.Query().Get("key") == "fakeApiKey":
-			http.Error(w, "Invalid API key", http.StatusUnauthorized)
-		case r.URL.Query().Get("key") == "expiredApiKey":
-			http.Error(w, "API key expired", http.StatusForbidden)
-		case r.URL.Query().Get("key") == "validApiKey":
+			return
+		}
+		// 2) Якщо ключ вірний — повертаємо фейкові дані
+		if key == "secret-key" {
 			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(200)
+			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(fakeWeatherData))
 			if err != nil {
 				http.Error(w, "Failed to write response", http.StatusInternalServerError)
+				return
 			}
+			return
 		}
+		// 3) Інакше — Unauthorized
+		http.Error(w, "Invalid API key", http.StatusUnauthorized)
 	})
-
 	return httptest.NewServer(handler)
 }
 
@@ -160,4 +161,12 @@ func FetchSubscription(t *testing.T, email, city string) map[string]interface{} 
 		"frequency": freq,
 		"Count":     cnt,
 	}
+}
+
+func saveSubscription(t *testing.T, email, city string, freq string, token string) {
+	_, err := db.Exec(
+		`INSERT INTO subscriptions (email, city, frequency, token) VALUES (?, ?, ?, ?)`,
+		email, city, freq, token,
+	)
+	assert.NoErrorf(t, err, "failed to save subscription: %v", err)
 }

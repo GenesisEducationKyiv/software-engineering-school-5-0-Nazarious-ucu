@@ -75,7 +75,7 @@ func (a *App) Init() ServiceContainer {
 	a.log.Printf("Initializing SMTP service with config: %+v\n", a.cfg.Email)
 	subRepository := repository.NewSubscriptionRepository(db, a.log)
 	emailService := email.NewService(smtpService, a.cfg.TemplatesDir)
-	weatherService := service.NewService(a.cfg.WeatherAPIKey, &http.Client{}, a.log)
+	weatherService := service.NewService(a.cfg.WeatherAPIKey, &http.Client{}, a.log, a.cfg.WeatherAPIURL)
 	notificator := notifier.New(subRepository,
 		weatherService,
 		emailService,
