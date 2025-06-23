@@ -32,6 +32,10 @@ func TestMain(m *testing.M) {
 
 	// Initialize the application
 	cfg, err := config.NewConfig()
+	cfg.Email.Host = "localhost"
+	cfg.Email.Port = "1025"
+	cfg.DB.Source = "test.db"
+
 	if err != nil {
 		log.Panicf("failed to load configuration: %v", err)
 	}
