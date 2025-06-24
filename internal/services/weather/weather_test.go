@@ -130,6 +130,6 @@ func TestGetByCity_Timeout(t *testing.T) {
 	defer cancel()
 
 	data, err := weatherService.GetByCity(ctx, "London")
-	assert.Error(t, err)
+	assert.Equal(t, errors.New("request timed out"), err)
 	assert.Equal(t, models.WeatherData{}, data)
 }

@@ -115,12 +115,12 @@ func NewTestAPIServer() *httptest.Server {
 		key := r.URL.Query().Get("key")
 		city := r.URL.Query().Get("q")
 
-		// 1) Якщо невірне місто — 404
+		// If invalid city
 		if city == "InvalidCity" {
 			http.Error(w, "City not found", http.StatusNotFound)
 			return
 		}
-		// 2) Якщо ключ вірний — повертаємо фейкові дані
+		// correct key - return data
 		if key == "secret-key" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
@@ -131,7 +131,7 @@ func NewTestAPIServer() *httptest.Server {
 			}
 			return
 		}
-		// 3) Інакше — Unauthorized
+		// unauthorized key
 		http.Error(w, "Invalid API key", http.StatusUnauthorized)
 	})
 	return httptest.NewServer(handler)
