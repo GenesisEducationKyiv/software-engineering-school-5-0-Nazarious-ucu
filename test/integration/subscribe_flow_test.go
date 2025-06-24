@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -58,19 +57,12 @@ func TestPostSubscribe(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			log.Printf("data to send: %s", tc.body)
 
-			// Create a new HTTP POST request
-			form := url.Values{}
-			form.Set("email", tc.wantDataInDatabase["email"].(string))         //nolint:errcheck
-			form.Set("city", tc.wantDataInDatabase["city"].(string))           //nolint:errcheck
-			form.Set("frequency", tc.wantDataInDatabase["frequency"].(string)) //nolint:errcheck
-
 			// Create a new request with context
 			var req *http.Request
 			ctx := context.Background()
 			req, err = http.NewRequestWithContext(ctx, http.MethodPost,
-				testServerURL+"/api/subscribe", strings.NewReader(form.Encode()))
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			log.Println(strings.NewReader(form.Encode()))
+				testServerURL+"/api/subscribe", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
 
 			resp, err := http.DefaultClient.Do(req)
 			assert.NoError(t, err)

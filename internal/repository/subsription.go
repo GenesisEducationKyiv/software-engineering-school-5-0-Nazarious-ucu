@@ -25,11 +25,11 @@ func NewSubscriptionRepository(db *sql.DB, logger *log.Logger) *SubscriptionRepo
 	return &SubscriptionRepository{DB: db, logger: logger}
 }
 
-func (r *SubscriptionRepository) Create(email, city, token string, frequency string) error {
+func (r *SubscriptionRepository) Create(data models.UserSubData, token string) error {
 	var cnt int
 	err := r.DB.QueryRow(
 		`SELECT COUNT(*) FROM subscriptions WHERE email = ? AND city = ?`,
-		email, city,
+		data.Email, data.City,
 	).Scan(&cnt)
 	if err != nil {
 		return err
@@ -37,12 +37,12 @@ func (r *SubscriptionRepository) Create(email, city, token string, frequency str
 	if cnt > 0 {
 		return ErrSubscriptionExists
 	}
-
+	r.logger.Println("Creating subscription for email:", data.Email, "city:", data.City)
 	_, err = r.DB.Exec(
 		`INSERT INTO subscriptions 
     				(email, city, token, confirmed, unsubscribed, created_at, frequency, last_sent)
          VALUES (?, ?, ?, 0, 0, ?, ?, null)`,
-		email, city, token, time.Now(), frequency,
+		data.Email, data.City, token, time.Now(), data.Frequency,
 	)
 	return err
 }

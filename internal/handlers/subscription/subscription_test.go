@@ -2,6 +2,7 @@ package subscription_test
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 )
 
 type mockService struct {
@@ -21,7 +23,7 @@ type mockService struct {
 	unsubErr   error
 }
 
-func (m *mockService) Subscribe(email, city, frequency string) error {
+func (m *mockService) Subscribe(data models.UserSubData) error {
 	return m.subErr
 }
 
@@ -55,20 +57,20 @@ func TestSubscribeEndpoint(t *testing.T) {
 	}{
 		{
 			name:     "missing fields",
-			body:     "email=&city=Kyiv&frequency=hourly",
+			body:     `{"email": "test@a.com", "city": "Kyiv"}`,
 			wantCode: http.StatusBadRequest,
 			wantBody: `{"error":"Missing required fields"}`,
 		},
 		{
 			name:     "service error",
-			body:     "email=a@b.com&city=Kyiv&frequency=daily",
+			body:     `{"email": "test@gmail.com", "city": "Lviv", "frequency": "hourly"}`,
 			mockErr:  errors.New("fail"),
 			wantCode: http.StatusInternalServerError,
 			wantBody: `{"error":"Internal server error"}`,
 		},
 		{
 			name:     "success",
-			body:     "email=a@b.com&city=Lviv&frequency=hourly",
+			body:     `{"email": "test@gmail.com", "city": "Lviv", "frequency": "hourly"}`,
 			wantCode: http.StatusOK,
 			wantBody: `{"message":"Subscribed successfully"}`,
 		},
@@ -81,7 +83,8 @@ func TestSubscribeEndpoint(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPost, "/subscribe",
 				strings.NewReader(tc.body))
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			log.Println(strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, req)
