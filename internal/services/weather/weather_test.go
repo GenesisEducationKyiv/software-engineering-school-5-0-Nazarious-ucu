@@ -2,7 +2,6 @@ package weather_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -110,26 +109,17 @@ func TestGetByCity_InvalidAPIKey(t *testing.T) {
 func TestGetByCity_Timeout(t *testing.T) {
 	mockClient := &mockHTTPClient{
 		doFunc: func(req *http.Request) (*http.Response, error) {
-			select {
-			case <-time.After(2 * time.Second):
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Body: io.NopCloser(strings.NewReader(
-						`{"location": {"name": "London"}, "current": 
-							{"temp_c": 15.0, "condition": {"text": "Sunny"}}}`)),
-				}, nil
-			case <-time.After(1 * time.Second):
-				return nil, errors.New("request timed out")
-			}
+			time.Sleep(1 * time.Second)
+			return nil, req.Context().Err()
 		},
 	}
 	weatherService := weather.NewService("mock_api_key",
 		mockClient, &log.Logger{}, "https://api.weatherapi.com/v1/current.json")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
 	data, err := weatherService.GetByCity(ctx, "London")
-	assert.Equal(t, errors.New("request timed out"), err)
+	assert.Equal(t, context.DeadlineExceeded, err)
 	assert.Equal(t, models.WeatherData{}, data)
 }

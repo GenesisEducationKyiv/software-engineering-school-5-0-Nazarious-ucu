@@ -4,11 +4,14 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
+
+const timeoutDuration = 10 * time.Second
 
 type servicer interface {
 	GetByCity(ctx context.Context, city string) (models.WeatherData, error)
@@ -40,7 +43,10 @@ func (h *Handler) GetWeather(c *gin.Context) {
 		return
 	}
 
-	data, err := h.service.GetByCity(context.Background(), city)
+	timeOutContext, cancel := context.WithTimeout(c.Request.Context(), timeoutDuration)
+	defer cancel()
+
+	data, err := h.service.GetByCity(timeOutContext, city)
 	if err != nil {
 		if strings.Contains(err.Error(), "status 404") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "City not found"})
