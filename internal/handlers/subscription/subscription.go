@@ -4,13 +4,17 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
-
 	"github.com/gin-gonic/gin"
 )
 
+type UserSubData struct {
+	Email     string `json:"email" binding:"required,email"`
+	City      string `json:"city" binding:"required"`
+	Frequency string `json:"frequency" binding:"required,oneof=hourly daily"`
+}
+
 type subscriber interface {
-	Subscribe(data models.UserSubData) error
+	Subscribe(data UserSubData) error
 	Confirm(token string) (bool, error)
 	Unsubscribe(token string) (bool, error)
 }
@@ -37,7 +41,7 @@ func NewHandler(svc subscriber) *Handler {
 // @Failure 500
 // @Router /subscribe [post]
 func (h *Handler) Subscribe(c *gin.Context) {
-	var userData models.UserSubData
+	var userData UserSubData
 	if err := c.ShouldBind(&userData); err != nil {
 		log.Printf("Failed to bind user data: %s", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required fields"})

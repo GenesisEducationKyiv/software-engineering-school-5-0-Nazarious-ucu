@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
 )
 
 const bytesNum = 16
@@ -14,7 +14,7 @@ type ConfirmationEmailer interface {
 }
 
 type SubscriptionRepository interface {
-	Create(data models.UserSubData, token string) error
+	Create(data subscription.UserSubData, token string) error
 	Confirm(token string) (bool, error)
 	Unsubscribe(token string) (bool, error)
 }
@@ -33,7 +33,7 @@ func NewService(repo SubscriptionRepository,
 	}
 }
 
-func (s *Service) Subscribe(data models.UserSubData) error {
+func (s *Service) Subscribe(data subscription.UserSubData) error {
 	tokenBytes := make([]byte, bytesNum)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		return err

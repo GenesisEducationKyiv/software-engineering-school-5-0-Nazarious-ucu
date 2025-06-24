@@ -7,6 +7,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 
 	_ "modernc.org/sqlite"
@@ -25,7 +27,7 @@ func NewSubscriptionRepository(db *sql.DB, logger *log.Logger) *SubscriptionRepo
 	return &SubscriptionRepository{DB: db, logger: logger}
 }
 
-func (r *SubscriptionRepository) Create(data models.UserSubData, token string) error {
+func (r *SubscriptionRepository) Create(data subscription.UserSubData, token string) error {
 	var cnt int
 	err := r.DB.QueryRow(
 		`SELECT COUNT(*) FROM subscriptions WHERE email = ? AND city = ?`,

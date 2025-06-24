@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 )
 
 type mockService struct {
@@ -23,7 +22,7 @@ type mockService struct {
 	unsubErr   error
 }
 
-func (m *mockService) Subscribe(data models.UserSubData) error {
+func (m *mockService) Subscribe(data subscription.UserSubData) error {
 	return m.subErr
 }
 
