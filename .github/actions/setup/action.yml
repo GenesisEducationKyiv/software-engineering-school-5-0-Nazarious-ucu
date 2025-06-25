@@ -26,10 +26,11 @@ runs:
       with:
         go-version-file: ${{ inputs.go-version-file }}
 
+
     - name: Install Task
       uses: arduino/setup-task@v2
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
 
     - name: Install Goose
       shell: sh

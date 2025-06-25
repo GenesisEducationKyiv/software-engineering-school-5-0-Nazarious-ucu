@@ -17,6 +17,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
           install-swaggo: 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
       - name: run Swag
         run: swag init --parseDependency --parseInternal --output ./docs -g main/main.go
