@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"log"
 	"time"
 
@@ -15,8 +14,6 @@ import (
 )
 
 const dayHours = 24
-
-var ErrSubscriptionExists = errors.New("subscription already exists")
 
 type SubscriptionRepository struct {
 	logger *log.Logger
@@ -37,7 +34,7 @@ func (r *SubscriptionRepository) Create(data subscription.UserSubData, token str
 		return err
 	}
 	if cnt > 0 {
-		return ErrSubscriptionExists
+		return subscription.ErrSubscriptionExists
 	}
 	r.logger.Println("Creating subscription for email:", data.Email, "city:", data.City)
 	_, err = r.DB.Exec(

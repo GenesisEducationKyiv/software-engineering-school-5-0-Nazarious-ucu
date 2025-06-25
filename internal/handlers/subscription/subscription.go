@@ -1,11 +1,14 @@
 package subscription
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
+
+var ErrSubscriptionExists = errors.New("subscription already exists")
 
 type UserSubData struct {
 	Email     string `json:"email" binding:"required,email"`
@@ -50,7 +53,7 @@ func (h *Handler) Subscribe(c *gin.Context) {
 
 	err := h.Service.Subscribe(userData)
 	if err != nil {
-		if err.Error() == "subscription already exists" {
+		if errors.Is(err, ErrSubscriptionExists) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Email and city already subscribed"})
 			return
 		}
