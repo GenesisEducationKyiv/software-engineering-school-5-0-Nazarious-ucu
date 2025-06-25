@@ -3,11 +3,14 @@ package weather
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
+
+const timeoutDuration = 5 * time.Second
 
 type servicer interface {
 	GetByCity(ctx context.Context, city string) (models.WeatherData, error)
@@ -38,9 +41,10 @@ func (h *Handler) GetWeather(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "city query parameter is required"})
 		return
 	}
-	ctx := context.Background()
+	ctxWithTimeout, cancel := context.WithTimeout(c.Request.Context(), timeoutDuration)
+	defer cancel()
 
-	data, err := h.service.GetByCity(ctx, city)
+	data, err := h.service.GetByCity(ctxWithTimeout, city)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
