@@ -80,7 +80,9 @@ func (a *App) Init() ServiceContainer {
 
 	weatherAPIClient := service.NewWeatherAPIClient(a.cfg.WeatherAPIKey, &http.Client{}, a.log)
 
-	weatherService := service.NewService(a.log, weatherAPIClient, openWeatherMapClient)
+	weatherBitClient := service.NewWeatherBitClient(a.cfg.WeatherBitAPIKey, &http.Client{}, a.log)
+
+	weatherService := service.NewService(a.log, weatherAPIClient, openWeatherMapClient, weatherBitClient)
 	notificator := notifier.New(subRepository,
 		weatherService,
 		emailService,

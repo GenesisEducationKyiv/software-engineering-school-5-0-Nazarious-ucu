@@ -20,6 +20,7 @@ type Email struct {
 type Config struct {
 	WeatherAPIKey        string `envconfig:"WEATHER_API_KEY" required:"true"`
 	OpenWeatherMapAPIKey string `envconfig:"OPEN_WEATHER_MAP_API_KEY" required:"true"`
+	WeatherBitAPIKey     string `envconfig:"WEATHER_BIT_API_KEY" required:"true"`
 	Server               Server
 	Email                Email
 }
