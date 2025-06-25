@@ -35,7 +35,8 @@ func NewOpenWeatherMapClient(apiKey string, httpClient HTTPClient, logger *log.L
 }
 
 func (s *ClientOpenWeatherMap) Fetch(ctx context.Context, city string) (models.WeatherData, error) {
-	url := fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s", city, s.APIKey)
+	url := fmt.Sprintf(
+		"https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=metric", city, s.APIKey)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
