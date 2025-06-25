@@ -18,9 +18,10 @@ type Email struct {
 }
 
 type Config struct {
-	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
-	Server        Server
-	Email         Email
+	WeatherAPIKey        string `envconfig:"WEATHER_API_KEY" required:"true"`
+	OpenWeatherMapAPIKey string `envconfig:"OPEN_WEATHER_MAP_API_KEY" required:"true"`
+	Server               Server
+	Email                Email
 }
 
 func NewConfig() (*Config, error) {

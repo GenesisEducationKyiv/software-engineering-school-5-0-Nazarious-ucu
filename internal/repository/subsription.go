@@ -114,7 +114,8 @@ func (r *SubscriptionRepository) UpdateLastSent(subscriptionID int) error {
 }
 
 func (r *SubscriptionRepository) GetConfirmedByFrequency(frequency string,
-	ctx context.Context) ([]models.Subscription, error) {
+	ctx context.Context,
+) ([]models.Subscription, error) {
 	rows, err := r.DB.QueryContext(ctx, `
 		SELECT id, email, city, frequency, last_sent
 		FROM subscriptions

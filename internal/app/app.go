@@ -16,6 +16,7 @@ import (
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
 	"github.com/pressly/goose/v3"
 
+	_ "github.com/Nazarious-ucu/weather-subscription-api/docs"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/emailer"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
@@ -33,7 +34,7 @@ type App struct {
 }
 
 type ServiceContainer struct {
-	weatherService      *service.Service
+	weatherService      *service.ServiceProvider
 	subscriptionService *subscriptions.Service
 	emailService        *email.Service
 	notificator         *notifier.Notifier
@@ -74,7 +75,12 @@ func (a *App) Init() ServiceContainer {
 	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
 	subRepository := repository.NewSubscriptionRepository(db, a.log)
 	emailService := email.NewService(smtpService)
-	weatherService := service.NewService(a.cfg.WeatherAPIKey, &http.Client{}, a.log)
+
+	openWeatherMapClient := service.NewOpenWeatherMapClient(a.cfg.OpenWeatherMapAPIKey, &http.Client{}, a.log)
+
+	weatherAPIClient := service.NewWeatherAPIClient(a.cfg.WeatherAPIKey, &http.Client{}, a.log)
+
+	weatherService := service.NewService(a.log, weatherAPIClient, openWeatherMapClient)
 	notificator := notifier.New(subRepository,
 		weatherService,
 		emailService,

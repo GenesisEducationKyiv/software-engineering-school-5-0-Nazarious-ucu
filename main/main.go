@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 
+	"github.com/joho/godotenv"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
 )
@@ -13,6 +15,10 @@ import (
 // @host localhost:8080
 // @BasePath /api/
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Printf("No .env file found: %v", err)
+	}
+
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Panicf("failed to load configuration: %v", err)
