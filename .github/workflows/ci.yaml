@@ -16,6 +16,10 @@ jobs:
         uses: ./.github/actions/setup
         with:
           go-version-file: 'go.mod'
+          install-swaggo: 'true'
+
+      - name: run Swag
+        run: swag init --parseDependency --parseInternal --output ./docs -g ./main/main.go
 
       - name: Run Linter
         run: task lint
