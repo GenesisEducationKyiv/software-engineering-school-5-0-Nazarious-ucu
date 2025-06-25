@@ -32,7 +32,6 @@ func NewWeatherBitClient(apiKey string, httpClient HTTPClient, logger *log.Logge
 }
 
 func (s *ClientWeatherBit) Fetch(ctx context.Context, city string) (models.WeatherData, error) {
-	fmt.Println("Getting weather with API token: ", s.APIKey)
 	url := fmt.Sprintf("https://api.weatherbit.io/v2.0/current?city=%s&key=%s", city, s.APIKey)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -52,7 +51,7 @@ func (s *ClientWeatherBit) Fetch(ctx context.Context, city string) (models.Weath
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		return models.WeatherData{}, fmt.Errorf("weather API error: status %d", resp.StatusCode)
+		return models.WeatherData{}, fmt.Errorf("WeatherBit API error: status %s", resp.Status)
 	}
 	var raw bitWeatherAPIResponse
 

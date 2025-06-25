@@ -31,7 +31,7 @@ func (s *ServiceProvider) GetByCity(ctx context.Context, city string) (models.We
 		data, err := client.Fetch(ctx, city)
 		if err != nil {
 			currentErr = err
-			s.logger.Printf("error fetching weather data: %v", err)
+			s.logger.Printf("%v", err)
 			continue
 		}
 		return data, nil
