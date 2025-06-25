@@ -22,8 +22,7 @@ jobs:
 
 
       - name: run Swag
-        run: swag init --parseDependency --parseInternal --output ./docs -g main.go
-        working-directory: ./main
+        run: swag init --parseDependency --parseInternal --output ./docs -g ./main/main.go
 
       - name: Run Linter
         run: task lint
