@@ -5,7 +5,7 @@ import (
 )
 
 type Server struct {
-	Address     string `envconfig:"SERVER_ADDRESS" default:":8080"`
+	Address     string `envconfig:"SERVER_ADDRESS" default:":8000"`
 	ReadTimeout int    `envconfig:"SERVER_TIMEOUT" default:"10"`
 }
 
@@ -23,6 +23,7 @@ type Config struct {
 	WeatherBitAPIKey     string `envconfig:"WEATHER_BIT_API_KEY" required:"true"`
 	Server               Server
 	Email                Email
+	LogsPath             string `envconfig:"LOGS_PATH" default:"./log/weather-subscription-api.log"`
 }
 
 func NewConfig() (*Config, error) {

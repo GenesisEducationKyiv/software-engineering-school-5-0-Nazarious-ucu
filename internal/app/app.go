@@ -6,11 +6,17 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/logger"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/subscriptions"
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather"
+	serviceWeather "github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
@@ -26,7 +32,15 @@ import (
 	swagger "github.com/swaggo/gin-swagger"
 )
 
-const timeoutDuration = 5 * time.Second
+const (
+	timeoutDuration = 5 * time.Second
+
+	fileMode = 0o644
+)
+
+type LoggerRoundTripper interface {
+	RoundTrip(*http.Request) (*http.Response, error)
+}
 
 type App struct {
 	cfg config.Config
@@ -34,7 +48,7 @@ type App struct {
 }
 
 type ServiceContainer struct {
-	weatherService      *service.ServiceProvider
+	weatherService      *serviceWeather.ServiceProvider
 	subscriptionService *subscriptions.Service
 	emailService        *email.Service
 	notificator         *notifier.Notifier
@@ -57,11 +71,11 @@ func (a *App) Init() ServiceContainer {
 
 	db, err := createSqliteDb()
 	if err != nil {
-		log.Panic(err)
+		a.log.Panic(err)
 	}
 
 	if err := initSqliteDb(db); err != nil {
-		log.Panic(err)
+		a.log.Panic(err)
 	}
 
 	router := gin.Default()
@@ -76,13 +90,38 @@ func (a *App) Init() ServiceContainer {
 	subRepository := repository.NewSubscriptionRepository(db, a.log)
 	emailService := email.NewService(smtpService)
 
-	openWeatherMapClient := service.NewOpenWeatherMapClient(a.cfg.OpenWeatherMapAPIKey, &http.Client{}, a.log)
+	fileLogger, err := NewFileLogger(a.cfg.LogsPath)
+	if err != nil {
+		a.log.Panicf("failed to create file logger: %v", err)
+	}
+	defer func(fileLogger *zap.Logger) {
+		err := fileLogger.Sync()
+		if err != nil {
+			a.log.Printf("failed to sync file logger: %v", err)
+		} else {
+			a.log.Println("File logger synced successfully")
+		}
+	}(fileLogger)
 
-	weatherAPIClient := service.NewWeatherAPIClient(a.cfg.WeatherAPIKey, &http.Client{}, a.log)
+	loggerT := logger.NewRoundTripper(fileLogger)
 
-	weatherBitClient := service.NewWeatherBitClient(a.cfg.WeatherBitAPIKey, &http.Client{}, a.log)
+	httpLogClient := &http.Client{
+		Transport: loggerT,
+	}
+	openWeatherMapClient := serviceWeather.NewOpenWeatherMapClient(
+		a.cfg.OpenWeatherMapAPIKey,
+		httpLogClient,
+		a.log,
+	)
 
-	weatherService := service.NewService(a.log, weatherAPIClient, openWeatherMapClient, weatherBitClient)
+	weatherAPIClient := serviceWeather.NewWeatherAPIClient(a.cfg.WeatherAPIKey, httpLogClient, a.log)
+
+	weatherBitClient := serviceWeather.NewWeatherBitClient(a.cfg.WeatherBitAPIKey, httpLogClient, a.log)
+
+	weatherService := serviceWeather.NewService(a.log,
+		weatherAPIClient,
+		openWeatherMapClient,
+		weatherBitClient)
 	notificator := notifier.New(subRepository,
 		weatherService,
 		emailService,
@@ -130,12 +169,12 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 		return err
 	}
 
-	log.Println("Application started successfully on", a.cfg.Server.Address)
+	a.log.Println("Application started successfully on", a.cfg.Server.Address)
 	defer func() {
 		if err := a.Stop(srvContainer); err != nil {
-			log.Panicf("failed to shutdown application: %v", err)
+			a.log.Panicf("failed to shutdown application: %v", err)
 		}
-		log.Println("Application shutdown successfully")
+		a.log.Println("Application shutdown successfully")
 	}()
 	return nil
 }
@@ -188,4 +227,23 @@ func initSqliteDb(db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func NewFileLogger(filePath string) (*zap.Logger, error) {
+	file, err := os.OpenFile(filepath.Clean(filePath), os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
+	if err != nil {
+		return nil, err
+	}
+
+	writer := zapcore.AddSync(file)
+
+	encoderCfg := zap.NewProductionEncoderConfig()
+	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(encoderCfg),
+		writer,
+		zap.InfoLevel,
+	)
+	return zap.New(core), nil
 }
