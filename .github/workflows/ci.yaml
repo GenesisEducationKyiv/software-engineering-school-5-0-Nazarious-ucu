@@ -19,7 +19,7 @@ jobs:
           install-swaggo: 'true'
 
       - name: run Swag
-        run: swag init --parseDependency --parseInternal --output ./docs -g ./main/main.go
+        run: swag init --parseDependency --parseInternal --output ./docs -g main/main.go
 
       - name: Run Linter
         run: task lint
