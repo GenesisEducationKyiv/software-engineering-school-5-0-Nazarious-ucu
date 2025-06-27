@@ -111,7 +111,7 @@ func TestGetByCity_InvalidAPIKey(t *testing.T) {
 		&http.Response{
 			StatusCode: http.StatusUnauthorized,
 			Body:       io.NopCloser(strings.NewReader(`{"error": "Invalid API key"}`)),
-		}).Once()
+		}, nil).Once()
 
 	t.Cleanup(func() {
 		m.AssertExpectations(t)
