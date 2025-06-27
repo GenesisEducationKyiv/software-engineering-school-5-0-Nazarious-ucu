@@ -46,7 +46,12 @@ type mockWeather struct {
 
 func (m *mockWeather) GetByCity(ctx context.Context, city string) (models.WeatherData, error) {
 	args := m.Called(ctx, city)
-	return args.Get(0).(models.WeatherData), args.Error(1)
+	data, err := args.Get(0).(models.WeatherData)
+	if err == false {
+		return models.WeatherData{}, args.Error(1)
+	}
+
+	return data, args.Error(1)
 }
 
 type mockEmail struct {
@@ -75,14 +80,16 @@ func Test_sendOne_Success(t *testing.T) {
 	mockW.On("GetByCity", mock.Anything, city).Return(forecast, nil)
 	mockE.On("SendWeather", email, forecast).Return(nil)
 
+	t.Cleanup(func() {
+		mockR.AssertExpectations(t)
+		mockW.AssertExpectations(t)
+		mockE.AssertExpectations(t)
+	})
+
 	n := notifier.New(mockR, mockW, mockE, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
 	err := n.SendOne(context.Background(), sub)
 
 	assert.NoError(t, err)
-
-	mockR.AssertExpectations(t)
-	mockW.AssertExpectations(t)
-	mockE.AssertExpectations(t)
 }
 
 func Test_sendOne_Error_APIError(t *testing.T) {
@@ -90,23 +97,21 @@ func Test_sendOne_Error_APIError(t *testing.T) {
 	sub := models.Subscription{ID: 2, City: city, Email: "x"}
 
 	// case1: GetByCity error
-	rm1 := &mockRepo{}
-	wm1 := &mockWeather{}
-	em1 := &mockEmail{}
+	rm := &mockRepo{}
+	wm := &mockWeather{}
+	em := &mockEmail{}
 
-	wm1.On("GetByCity", mock.Anything, city).Return(models.WeatherData{}, errors.New("api down"))
-	// no email or update expectation
+	wm.On("GetByCity", mock.Anything, city).Return(models.WeatherData{}, errors.New("api down"))
 
-	n1 := notifier.New(rm1, wm1, em1, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
+	t.Cleanup(func() {
+		rm.AssertExpectations(t)
+		wm.AssertExpectations(t)
+		em.AssertExpectations(t)
+	})
+
+	n1 := notifier.New(rm, wm, em, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
 	err1 := n1.SendOne(context.Background(), sub)
 	assert.Error(t, err1)
-
-	// case2: SendWeather error
-
-	// assert expectations
-	rm1.AssertExpectations(t)
-	wm1.AssertExpectations(t)
-	em1.AssertExpectations(t)
 }
 
 func Test_sendOne_Error_EmailError(t *testing.T) {
@@ -115,19 +120,22 @@ func Test_sendOne_Error_EmailError(t *testing.T) {
 
 	rm := &mockRepo{}
 	wm := &mockWeather{}
+
 	em := &mockEmail{}
 
 	wm.On("GetByCity", mock.Anything, city).Return(models.WeatherData{City: city}, nil)
 	em.On("SendWeather", sub.Email, mock.Anything).Return(errors.New("smtp fail"))
 
+	t.Cleanup(func() {
+		rm.AssertExpectations(t)
+		wm.AssertExpectations(t)
+		em.AssertExpectations(t)
+	})
+
 	// UpdateLastSent should not be called on send fail
 	n2 := notifier.New(rm, wm, em, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
 	err2 := n2.SendOne(context.Background(), sub)
 	assert.Error(t, err2)
-
-	rm.AssertExpectations(t)
-	wm.AssertExpectations(t)
-	em.AssertExpectations(t)
 }
 
 func Test_runDue_Success(t *testing.T) {
@@ -150,17 +158,18 @@ func Test_runDue_Success(t *testing.T) {
 	em.On("SendWeather", "a", mock.Anything).Return(nil)
 	em.On("SendWeather", "b", mock.Anything).Return(nil)
 
+	t.Cleanup(func() {
+		rm.AssertExpectations(t)
+		wm.AssertExpectations(t)
+		em.AssertExpectations(t)
+	})
+
 	n := notifier.New(rm, wm, em, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	n.RunDue(ctx, freqTest)
-
-	// verify calls
-	rm.AssertExpectations(t)
-	wm.AssertExpectations(t)
-	em.AssertExpectations(t)
 }
 
 func Test_runDue_FetchError(t *testing.T) {
@@ -170,13 +179,16 @@ func Test_runDue_FetchError(t *testing.T) {
 
 	n := notifier.New(mockR, mockW, mockE, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
 
-	mockR.On("GetConfirmedByFrequency", freqTest, mock.Anything).Return([]models.Subscription{}, nil)
-	mockR.On("UpdateLastSent", 10).Return(nil)
-	mockR.On("UpdateLastSent", 20).Return(errors.New("smtp fail"))
+	mockR.On("GetConfirmedByFrequency", freqTest, mock.Anything).
+		Return([]models.Subscription{}, errors.New("db down"))
+
+	mockR.AssertNumberOfCalls(t, "UpdateLastSent", 0)
+	mockW.AssertNumberOfCalls(t, "GetByCity", 0)
+	mockE.AssertNumberOfCalls(t, "SendWeather", 0)
 
 	n.RunDue(context.Background(), freqTest)
 
 	t.Cleanup(func() {
-		mock.AssertExpectationsForObjects(t, mockR, mockE, mockW)
+		mockR.AssertExpectations(t)
 	})
 }

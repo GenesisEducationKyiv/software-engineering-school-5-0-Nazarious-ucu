@@ -3,6 +3,7 @@ package notifier
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
@@ -93,14 +94,20 @@ func (n *Notifier) RunDue(ctx context.Context, frequency string) {
 		n.logger.Println("Error fetching due subs:", err)
 		return
 	}
+	wg := &sync.WaitGroup{}
+
+	wg.Add(len(subs))
 
 	for _, sub := range subs {
 		go func(s models.Subscription) {
+			defer wg.Done()
 			if err := n.SendOne(ctx, s); err != nil {
 				n.logger.Println("Error sending update:", err)
 			}
 		}(sub)
 	}
+
+	wg.Wait()
 }
 
 func (n *Notifier) SendOne(ctx context.Context, sub models.Subscription) error {
