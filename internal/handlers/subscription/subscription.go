@@ -79,14 +79,14 @@ func (h *Handler) Confirm(c *gin.Context) {
 	token := c.Param("token")
 	ok, err := h.Service.Confirm(token)
 	if err != nil {
-		c.Writer.WriteHeader(http.StatusInternalServerError)
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	if !ok {
-		c.Writer.WriteHeader(http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	c.Writer.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
 // Unsubscribe
@@ -102,12 +102,12 @@ func (h *Handler) Unsubscribe(c *gin.Context) {
 	token := c.Param("token")
 	ok, err := h.Service.Unsubscribe(token)
 	if err != nil {
-		c.Writer.WriteHeader(http.StatusInternalServerError)
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	if !ok {
-		c.Writer.WriteHeader(http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	c.Writer.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }

@@ -26,12 +26,6 @@ func NewSMTPService(cfg *config.Config, logger *log.Logger) *SMTPService {
 		logger:   logger,
 	}
 
-	//
-	// if svc.user == "" || svc.host == "" || svc.port == "" || svc.password == "" || svc.From == "" {
-	//	logger.Printf("SMTP credentials are not fully set: %+v\n", svc)
-	//	return nil
-	// }
-
 	return svc
 }
 

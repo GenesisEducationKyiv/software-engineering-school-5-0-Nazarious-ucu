@@ -2,7 +2,6 @@ package subscription_test
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,40 +9,31 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
 )
 
 type mockService struct {
-	subErr     error
-	confirmOK  bool
-	confirmErr error
-	unsubOK    bool
-	unsubErr   error
+	mock.Mock
 }
 
 func (m *mockService) Subscribe(data subscription.UserSubData) error {
-	return m.subErr
+	args := m.Called(data)
+
+	return args.Error(0)
 }
 
 func (m *mockService) Confirm(token string) (bool, error) {
-	return m.confirmOK, m.confirmErr
+	args := m.Called(token)
+	return args.Bool(0), args.Error(1)
 }
 
 func (m *mockService) Unsubscribe(token string) (bool, error) {
-	return m.unsubOK, m.unsubErr
-}
+	args := m.Called(token)
 
-func setupRouter(svc *mockService) *gin.Engine {
-	gin.SetMode(gin.TestMode)
-	r := gin.New()
-
-	h := subscription.NewHandler(svc)
-	r.POST("/subscribe", h.Subscribe)
-	r.GET("/confirm/:token", h.Confirm)
-	r.GET("/unsubscribe/:token", h.Unsubscribe)
-
-	return r
+	return args.Bool(0), args.Error(1)
 }
 
 func TestSubscribeEndpoint(t *testing.T) {
@@ -77,19 +67,28 @@ func TestSubscribeEndpoint(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			mock := &mockService{subErr: tc.mockErr}
-			router := setupRouter(mock)
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
 
-			req := httptest.NewRequest(http.MethodPost, "/subscribe",
+			m := &mockService{}
+			m.On("Subscribe", mock.Anything).Return(tc.mockErr).Maybe()
+
+			t.Cleanup(func() {
+				m.AssertExpectations(t)
+			})
+
+			req, err := http.NewRequest(http.MethodPost, "/subscribe",
 				strings.NewReader(tc.body))
-			log.Println(strings.NewReader(tc.body))
+			require.NoError(t, err)
+
 			req.Header.Set("Content-Type", "application/json")
-			w := httptest.NewRecorder()
+			c.Request = req
 
-			router.ServeHTTP(w, req)
+			h := subscription.NewHandler(m)
+			h.Subscribe(c)
 
-			assert.Equal(t, tc.wantCode, w.Code)
-			assert.JSONEq(t, tc.wantBody, w.Body.String())
+			assert.Equal(t, tc.wantCode, rec.Code)
+			assert.JSONEq(t, tc.wantBody, rec.Body.String())
 		})
 	}
 }
@@ -105,7 +104,7 @@ func TestConfirmEndpoint(t *testing.T) {
 		{
 			name:     "service error",
 			token:    "tok1",
-			mockOK:   false,
+			mockOK:   true,
 			mockErr:  errors.New("fail"),
 			wantCode: http.StatusInternalServerError,
 		},
@@ -127,15 +126,27 @@ func TestConfirmEndpoint(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			mock := &mockService{confirmOK: tc.mockOK, confirmErr: tc.mockErr}
-			router := setupRouter(mock)
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
 
-			req := httptest.NewRequest(http.MethodGet, "/confirm/"+tc.token, nil)
-			w := httptest.NewRecorder()
+			m := &mockService{}
 
-			router.ServeHTTP(w, req)
+			m.On("Confirm", mock.Anything).Return(tc.mockOK, tc.mockErr).Once()
 
-			assert.Equal(t, tc.wantCode, w.Code)
+			t.Cleanup(func() {
+				m.AssertExpectations(t)
+			})
+
+			req, err := http.NewRequest(http.MethodGet, "/confirm/"+tc.token, nil)
+
+			require.NoError(t, err)
+
+			c.Request = req
+
+			h := subscription.NewHandler(m)
+			h.Confirm(c)
+
+			assert.Equal(t, tc.wantCode, rec.Code)
 		})
 	}
 }
@@ -173,15 +184,25 @@ func TestUnsubscribeEndpoint(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			mock := &mockService{unsubOK: tc.mockOK, unsubErr: tc.mockErr}
-			router := setupRouter(mock)
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+
+			m := &mockService{}
+
+			m.On("Unsubscribe", mock.Anything).Return(tc.mockOK, tc.mockErr).Once()
+
+			t.Cleanup(func() {
+				m.AssertExpectations(t)
+			})
 
 			req := httptest.NewRequest(http.MethodGet, "/unsubscribe/"+tc.token, nil)
-			w := httptest.NewRecorder()
 
-			router.ServeHTTP(w, req)
+			c.Request = req
 
-			assert.Equal(t, tc.wantCode, w.Code)
+			h := subscription.NewHandler(m)
+			h.Unsubscribe(c)
+
+			assert.Equal(t, tc.wantCode, rec.Code)
 		})
 	}
 }

@@ -46,9 +46,9 @@ func (e *Service) SendConfirmation(toEmail, token string) error {
 		body.String())
 }
 
-func (e *Service) SendWeather(toEmail, city string, forecast models.WeatherData) error {
+func (e *Service) SendWeather(toEmail string, forecast models.WeatherData) error {
 	temp := strconv.FormatFloat(forecast.Temperature, 'f', 1, 64)
-	body := "Weather update for " + city + ":\n" +
+	body := "Weather update for " + forecast.City + ":\n" +
 		"Temperature: " + temp + "°C\n" +
 		"Condition: " + forecast.Condition
 

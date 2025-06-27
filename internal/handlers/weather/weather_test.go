@@ -8,6 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -17,23 +20,38 @@ import (
 )
 
 type mockService struct {
-	data models.WeatherData
-	err  error
+	mock.Mock
 }
 
 func (m *mockService) GetByCity(ctx context.Context, city string) (models.WeatherData, error) {
-	return m.data, m.err
+	args := m.Called(ctx, city)
+
+	data, err := args.Get(0).(models.WeatherData)
+
+	if err == false {
+		return models.WeatherData{}, args.Error(1)
+	}
+
+	return data, args.Error(1)
 }
 
 func TestGetWeather_NoCity(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 
-	var err error
-	c.Request, err = http.NewRequest(http.MethodGet, "/weather", nil)
-	assert.NoError(t, err)
+	m := &mockService{}
 
-	h := weather.NewHandler(&mockService{})
+	t.Cleanup(func() {
+		m.AssertExpectations(t)
+	})
+
+	req, err := http.NewRequest(http.MethodGet, "/weather", nil)
+	require.NoError(t, err)
+
+	c.Request = req
+
+	h := weather.NewHandler(m)
+
 	h.GetWeather(c)
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -43,19 +61,27 @@ func TestGetWeather_NoCity(t *testing.T) {
 func TestGetWeather_ServiceError(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
+
+	m := &mockService{}
+
+	m.On("GetByCity", mock.Anything, mock.Anything).
+		Return(models.WeatherData{}, errors.New("service unavailable")).Once()
+
+	t.Cleanup(func() {
+		m.AssertExpectations(t)
+	})
+
 	req, err := http.NewRequest(http.MethodGet, "/weather?city=Kyiv", nil)
 	assert.NoError(t, err)
 
 	c.Request = req
 
-	errMsg := "service unavailable"
-	m := &mockService{err: errors.New(errMsg)}
 	h := weather.NewHandler(m)
 
 	h.GetWeather(c)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	assert.JSONEq(t, fmt.Sprintf(`{"error":"%s"}`, errMsg), rec.Body.String())
+	assert.JSONEq(t, `{"error":"service unavailable"}`, rec.Body.String())
 }
 
 func TestGetWeather_Success(t *testing.T) {
@@ -63,7 +89,13 @@ func TestGetWeather_Success(t *testing.T) {
 	c, _ := gin.CreateTestContext(rec)
 	data := models.WeatherData{City: "Kyiv", Temperature: 20.5, Condition: "Sunny"}
 
-	m := &mockService{data: data}
+	m := &mockService{}
+	m.On("GetByCity", mock.Anything, mock.Anything).Return(data, nil).Once()
+
+	t.Cleanup(func() {
+		m.AssertExpectations(t)
+	})
+
 	h := weather.NewHandler(m)
 
 	req, err := http.NewRequest(http.MethodGet, "/weather?city=Kyiv", nil)

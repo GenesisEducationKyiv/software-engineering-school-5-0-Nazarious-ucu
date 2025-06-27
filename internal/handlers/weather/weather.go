@@ -13,15 +13,15 @@ import (
 
 const timeoutDuration = 10 * time.Second
 
-type servicer interface {
+type weatherGetterService interface {
 	GetByCity(ctx context.Context, city string) (models.WeatherData, error)
 }
 
 type Handler struct {
-	service servicer
+	service weatherGetterService
 }
 
-func NewHandler(svc servicer) *Handler {
+func NewHandler(svc weatherGetterService) *Handler {
 	return &Handler{service: svc}
 }
 

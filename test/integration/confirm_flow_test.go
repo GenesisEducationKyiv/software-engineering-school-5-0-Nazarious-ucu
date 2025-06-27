@@ -27,7 +27,6 @@ func TestPostConfirm(t *testing.T) {
 
 	token := hex.EncodeToString(tokenBytes)
 
-	// Initialize the test server
 	testCases := []struct {
 		name          string
 		token         string
