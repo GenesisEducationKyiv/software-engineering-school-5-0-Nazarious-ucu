@@ -35,16 +35,25 @@ func TestMain(m *testing.M) {
 		log.Panicf("failed to load configuration: %v", err)
 	}
 
-	// Initialize the test server
-	server := NewTestAPIServer()
+	// Initialize the test testWeatherAPIServer
+	testWeatherAPIServer := NewTestWeatherAPIServer()
+	defer testWeatherAPIServer.Close()
 
-	defer server.Close()
+	testOpenWeatherAPIServer := newTestOpenWeatherAPIServer()
+	defer testOpenWeatherAPIServer.Close()
+
+	testWeatherBitAPIServer := newWeatherBitTestServer()
+	defer testWeatherBitAPIServer.Close()
 
 	cfg.Email.Host = "localhost"
 	cfg.Email.Port = "1025"
 	cfg.DB.Source = "test.db"
-	cfg.WeatherAPIURL = server.URL
+	cfg.WeatherAPIURL = testWeatherAPIServer.URL
 	cfg.WeatherAPIKey = "secret-key"
+	cfg.OpenWeatherMapAPIKey = "secret-key"
+	cfg.OpenWeatherMapURL = testOpenWeatherAPIServer.URL
+	cfg.WeatherBitAPIKey = "secret-key"
+	cfg.WeatherBitURL = testWeatherBitAPIServer.URL
 	cfg.DB.MigrationsPath = "../../migrations"
 
 	application := app.New(*cfg, log.Default())
@@ -62,7 +71,7 @@ func TestMain(m *testing.M) {
 
 	defer func() {
 		if err := srvContainer.Srv.Close(); err != nil {
-			log.Println("Error stopping server:", err)
+			log.Println("Error stopping testWeatherAPIServer:", err)
 		}
 	}()
 
@@ -88,7 +97,7 @@ func TestMain(m *testing.M) {
 
 	notificator.Start(context.Background())
 
-	// Create a test server
+	// Create a test testWeatherAPIServer
 	testServer := httptest.NewServer(srvContainer.Router)
 
 	initIntegration(testServer.URL, srvContainer.Db)
@@ -107,7 +116,7 @@ func resetTables(db *sql.DB) error {
 	return nil
 }
 
-func NewTestAPIServer() *httptest.Server {
+func NewTestWeatherAPIServer() *httptest.Server {
 	fakeWeatherData := `{
        "location": {"name":"H_E_L_L"},
        "current": {"temp_c":10000.0, "condition": {"text":"Sunny"}}
@@ -173,4 +182,87 @@ func saveSubscription(t *testing.T, email, city string, freq string, token strin
 		email, city, freq, token,
 	)
 	assert.NoErrorf(t, err, "failed to save subscription: %v", err)
+}
+
+func newTestOpenWeatherAPIServer() *httptest.Server {
+	const mockWeatherResponse = `{
+		  "main": {
+			"temp": 22.5,
+			"feels_like": 24.0,
+			"pressure": 1013,
+			"humidity": 60
+		  },
+		  "weather": [
+			{
+			  "main": "Clear",
+			  "description": "clear sky"
+			},
+			{
+			  "main": "Wind",
+			  "description": "light breeze"
+			}
+		  ]
+		}`
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		key := r.URL.Query().Get("key")
+		city := r.URL.Query().Get("q")
+
+		// If invalid city
+		if city == "InvalidCity" {
+			http.Error(w, "City not found", http.StatusNotFound)
+			return
+		}
+		// correct key - return data
+		if key == "secret-key" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte(mockWeatherResponse))
+			if err != nil {
+				http.Error(w, "Failed to write response", http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+		// unauthorized key
+		http.Error(w, "Invalid API key", http.StatusUnauthorized)
+	})
+	return httptest.NewServer(handler)
+}
+
+func newWeatherBitTestServer() *httptest.Server {
+	const mockBitWeatherResponse = `{
+		  "data": [
+			{
+			  "city_name": "Odesa",
+			  "temp": 27.5,
+			  "weather": {
+				"description": "sunny"
+			  }
+			}
+		  ]
+		}`
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		key := r.URL.Query().Get("key")
+		city := r.URL.Query().Get("city")
+
+		// If invalid city
+		if city == "InvalidCity" {
+			http.Error(w, "City not found", http.StatusNotFound)
+			return
+		}
+		// correct key - return data
+		if key == "secret-key" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte(mockBitWeatherResponse))
+			if err != nil {
+				http.Error(w, "Failed to write response", http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+		// unauthorized key
+		http.Error(w, "Invalid API key", http.StatusUnauthorized)
+	})
+	return httptest.NewServer(handler)
 }

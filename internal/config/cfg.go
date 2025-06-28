@@ -38,7 +38,9 @@ type Config struct {
 
 	TemplatesDir         string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
 	OpenWeatherMapAPIKey string `envconfig:"OPEN_WEATHER_MAP_API_KEY" required:"true"`
+	OpenWeatherMapURL    string `envconfig:"OPEN_WEATHER_MAP_URL" required:"true"`
 	WeatherBitAPIKey     string `envconfig:"WEATHER_BIT_API_KEY" required:"true"`
+	WeatherBitURL        string `envconfig:"WEATHER_BIT_URL" required:"true"`
 	LogsPath             string `envconfig:"LOGS_PATH" default:"./log/weather-subscription-api.log"`
 }
 

@@ -26,17 +26,18 @@ type apiResponse = struct {
 
 type ClientOpenWeatherMap struct {
 	APIKey string
+	apiURL string
 	client HTTPClient
 	logger *log.Logger
 }
 
-func NewOpenWeatherMapClient(apiKey string, httpClient HTTPClient, logger *log.Logger) *ClientOpenWeatherMap {
-	return &ClientOpenWeatherMap{APIKey: apiKey, client: httpClient, logger: logger}
+func NewOpenWeatherMapClient(apiKey, apiURL string,
+	httpClient HTTPClient, logger *log.Logger) *ClientOpenWeatherMap {
+	return &ClientOpenWeatherMap{APIKey: apiKey, apiURL: apiURL, client: httpClient, logger: logger}
 }
 
 func (s *ClientOpenWeatherMap) Fetch(ctx context.Context, city string) (models.WeatherData, error) {
-	url := fmt.Sprintf(
-		"https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=metric", city, s.APIKey)
+	url := fmt.Sprintf("%s?q=%s&appid=%s&units=metric", s.apiURL, city, s.APIKey)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

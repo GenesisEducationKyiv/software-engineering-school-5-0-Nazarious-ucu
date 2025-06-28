@@ -23,16 +23,17 @@ type bitWeatherAPIResponse = struct {
 
 type ClientWeatherBit struct {
 	APIKey string
+	apiURL string
 	client HTTPClient
 	logger *log.Logger
 }
 
-func NewWeatherBitClient(apiKey string, httpClient HTTPClient, logger *log.Logger) *ClientWeatherBit {
-	return &ClientWeatherBit{APIKey: apiKey, client: httpClient, logger: logger}
+func NewWeatherBitClient(apiKey, apiURL string, httpClient HTTPClient, logger *log.Logger) *ClientWeatherBit {
+	return &ClientWeatherBit{APIKey: apiKey, apiURL: apiURL, client: httpClient, logger: logger}
 }
 
 func (s *ClientWeatherBit) Fetch(ctx context.Context, city string) (models.WeatherData, error) {
-	url := fmt.Sprintf("https://api.weatherbit.io/v2.0/current?city=%s&key=%s", city, s.APIKey)
+	url := fmt.Sprintf("%s?city=%s&key=%s", s.apiURL, city, s.APIKey)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -50,6 +51,7 @@ func (s *ClientWeatherBit) Fetch(ctx context.Context, city string) (models.Weath
 		}
 	}(resp.Body)
 
+	s.logger.Printf("response code: %d", resp.StatusCode)
 	if resp.StatusCode != http.StatusOK {
 		return models.WeatherData{}, fmt.Errorf("WeatherBit API error: status %s", resp.Status)
 	}

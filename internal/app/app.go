@@ -111,6 +111,7 @@ func (a *App) Init() ServiceContainer {
 	}
 	openWeatherMapClient := serviceWeather.NewOpenWeatherMapClient(
 		a.cfg.OpenWeatherMapAPIKey,
+		a.cfg.OpenWeatherMapURL,
 		httpLogClient,
 		a.log,
 	)
@@ -122,7 +123,12 @@ func (a *App) Init() ServiceContainer {
 		a.log,
 	)
 
-	weatherBitClient := serviceWeather.NewWeatherBitClient(a.cfg.WeatherBitAPIKey, httpLogClient, a.log)
+	weatherBitClient := serviceWeather.NewWeatherBitClient(
+		a.cfg.WeatherBitAPIKey,
+		a.cfg.WeatherBitURL,
+		httpLogClient,
+		a.log,
+	)
 
 	weatherService := serviceWeather.NewService(a.log,
 		weatherAPIClient,
