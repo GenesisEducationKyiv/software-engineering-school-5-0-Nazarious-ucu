@@ -48,7 +48,7 @@ type App struct {
 }
 
 type ServiceContainer struct {
-	WeatherService      *serviceWeather.Service
+	WeatherService      *serviceWeather.ServiceProvider
 	SubscriptionService *subscriptions.Service
 	EmailService        *email.Service
 	Notificator         *notifier.Notifier
@@ -90,10 +90,8 @@ func (a *App) Init() ServiceContainer {
 	a.log.Printf("Initializing SMTP service with config: %+v\n", a.cfg.Email)
 	subRepository := repository.NewSubscriptionRepository(db, a.log)
 	emailService := email.NewService(smtpService, a.cfg.TemplatesDir)
-	//weather-subscription-apierService := service.NewService(a.cfg.WeatherAPIKey, &http.Client{}, a.log, a.cfg.WeatherAPIURL)
-	emailService := email.NewService(smtpService)
 
-	fileLogger, err := NewFileLogger(a.cfg.LogsPath)
+	fileLogger, err := newFileLogger(a.cfg.LogsPath)
 	if err != nil {
 		a.log.Panicf("failed to create file logger: %v", err)
 	}
@@ -117,7 +115,12 @@ func (a *App) Init() ServiceContainer {
 		a.log,
 	)
 
-	weatherAPIClient := serviceWeather.NewWeatherAPIClient(a.cfg.WeatherAPIKey, httpLogClient, a.log)
+	weatherAPIClient := serviceWeather.NewWeatherAPIClient(
+		a.cfg.WeatherAPIKey,
+		a.cfg.WeatherAPIURL,
+		httpLogClient,
+		a.log,
+	)
 
 	weatherBitClient := serviceWeather.NewWeatherBitClient(a.cfg.WeatherBitAPIKey, httpLogClient, a.log)
 
@@ -240,7 +243,7 @@ func InitSqliteDb(db *sql.DB, dialect, migrationPath string) error {
 	return nil
 }
 
-func NewFileLogger(filePath string) (*zap.Logger, error) {
+func newFileLogger(filePath string) (*zap.Logger, error) {
 	file, err := os.OpenFile(filepath.Clean(filePath), os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
 	if err != nil {
 		return nil, err

@@ -68,7 +68,7 @@ tasks:
   test:unit:
     desc: "Run unit tests"
     cmds:
-      - go test -v ./...
+      - go test -v -tags=unit ./...
 
   test:integration:
     desc: "Run integration tests (requires docker-compose.test.yml)"

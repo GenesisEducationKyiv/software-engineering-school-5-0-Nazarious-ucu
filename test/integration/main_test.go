@@ -44,6 +44,8 @@ func TestMain(m *testing.M) {
 	cfg.Email.Port = "1025"
 	cfg.DB.Source = "test.db"
 	cfg.WeatherAPIURL = server.URL
+	cfg.WeatherAPIKey = "secret-key"
+	cfg.DB.MigrationsPath = "../../migrations"
 
 	application := app.New(*cfg, log.Default())
 	srvContainer := application.Init()

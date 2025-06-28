@@ -1,4 +1,4 @@
-// internal/notifier/notifier_test.go
+//go:build unit
 
 package notifier_test
 

@@ -15,14 +15,15 @@ type ClientWeatherAPI struct {
 	APIKey string
 	client HTTPClient
 	logger *log.Logger
+	apiURL string
 }
 
-func NewWeatherAPIClient(apiKey string, httpClient HTTPClient, logger *log.Logger) *ClientWeatherAPI {
-	return &ClientWeatherAPI{APIKey: apiKey, client: httpClient, logger: logger}
+func NewWeatherAPIClient(apiKey, apiURL string, httpClient HTTPClient, logger *log.Logger) *ClientWeatherAPI {
+	return &ClientWeatherAPI{APIKey: apiKey, client: httpClient, logger: logger, apiURL: apiURL}
 }
 
 func (s *ClientWeatherAPI) Fetch(ctx context.Context, city string) (models.WeatherData, error) {
-	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", s.APIKey, city)
+	url := fmt.Sprintf(s.apiURL+"?key=%s&q=%s", s.APIKey, city)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

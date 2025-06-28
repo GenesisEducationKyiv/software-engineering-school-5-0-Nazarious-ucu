@@ -36,7 +36,7 @@ type Config struct {
 	DB            Db
 	NotifierFreq  NotifierFrequency
 
-	TemplatesDir string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
+	TemplatesDir         string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
 	OpenWeatherMapAPIKey string `envconfig:"OPEN_WEATHER_MAP_API_KEY" required:"true"`
 	WeatherBitAPIKey     string `envconfig:"WEATHER_BIT_API_KEY" required:"true"`
 	LogsPath             string `envconfig:"LOGS_PATH" default:"./log/weather-subscription-api.log"`
