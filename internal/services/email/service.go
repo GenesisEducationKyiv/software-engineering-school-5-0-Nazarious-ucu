@@ -14,17 +14,19 @@ type Emailer interface {
 }
 
 type Service struct {
-	emailer Emailer
+	emailer      Emailer
+	templatesDir string
 }
 
-func NewService(service Emailer) *Service {
+func NewService(service Emailer, tempsDir string) *Service {
 	return &Service{
-		emailer: service,
+		emailer:      service,
+		templatesDir: tempsDir,
 	}
 }
 
 func (e *Service) SendConfirmation(toEmail, token string) error {
-	tmpl, err := template.ParseFiles("internal/templates/confirm_email.html")
+	tmpl, err := template.ParseFiles(e.templatesDir + "/confirm_email.html")
 	if err != nil {
 		return err
 	}
@@ -44,9 +46,9 @@ func (e *Service) SendConfirmation(toEmail, token string) error {
 		body.String())
 }
 
-func (e *Service) SendWeather(toEmail, city string, forecast models.WeatherData) error {
+func (e *Service) SendWeather(toEmail string, forecast models.WeatherData) error {
 	temp := strconv.FormatFloat(forecast.Temperature, 'f', 1, 64)
-	body := "Weather update for " + city + ":\n" +
+	body := "Weather update for " + forecast.City + ":\n" +
 		"Temperature: " + temp + "°C\n" +
 		"Condition: " + forecast.Condition
 

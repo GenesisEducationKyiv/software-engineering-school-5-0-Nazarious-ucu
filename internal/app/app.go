@@ -48,15 +48,15 @@ type App struct {
 }
 
 type ServiceContainer struct {
-	weatherService      *serviceWeather.ServiceProvider
-	subscriptionService *subscriptions.Service
-	emailService        *email.Service
-	notificator         *notifier.Notifier
-	subRepository       repository.SubscriptionRepository
+	WeatherService      *serviceWeather.Service
+	SubscriptionService *subscriptions.Service
+	EmailService        *email.Service
+	Notificator         *notifier.Notifier
+	SubRepository       repository.SubscriptionRepository
 
-	router *gin.Engine
-	srv    *http.Server
-	db     *sql.DB
+	Router *gin.Engine
+	Srv    *http.Server
+	Db     *sql.DB
 }
 
 func New(cfg config.Config, logger *log.Logger) *App {
@@ -69,12 +69,12 @@ func New(cfg config.Config, logger *log.Logger) *App {
 func (a *App) Init() ServiceContainer {
 	a.log.Println("Initializing application with configuration:", a.cfg)
 
-	db, err := createSqliteDb()
+	db, err := CreateSqliteDb(a.cfg.DB.Dialect, a.cfg.DB.Source)
 	if err != nil {
 		a.log.Panic(err)
 	}
 
-	if err := initSqliteDb(db); err != nil {
+	if err := InitSqliteDb(db, a.cfg.DB.Dialect, a.cfg.DB.MigrationsPath); err != nil {
 		a.log.Panic(err)
 	}
 
@@ -87,7 +87,10 @@ func (a *App) Init() ServiceContainer {
 	}
 
 	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
+	a.log.Printf("Initializing SMTP service with config: %+v\n", a.cfg.Email)
 	subRepository := repository.NewSubscriptionRepository(db, a.log)
+	emailService := email.NewService(smtpService, a.cfg.TemplatesDir)
+	//weather-subscription-apierService := service.NewService(a.cfg.WeatherAPIKey, &http.Client{}, a.log, a.cfg.WeatherAPIURL)
 	emailService := email.NewService(smtpService)
 
 	fileLogger, err := NewFileLogger(a.cfg.LogsPath)
@@ -125,18 +128,21 @@ func (a *App) Init() ServiceContainer {
 	notificator := notifier.New(subRepository,
 		weatherService,
 		emailService,
-		a.log)
+		a.log,
+		a.cfg.NotifierFreq.HourlyFrequency,
+		a.cfg.NotifierFreq.DailyFrequency,
+	)
 
 	srvContainer := ServiceContainer{
-		weatherService:      weatherService,
-		subscriptionService: subscriptions.NewService(subRepository, emailService),
-		emailService:        emailService,
-		subRepository:       *subRepository,
-		notificator:         notificator,
+		WeatherService:      weatherService,
+		SubscriptionService: subscriptions.NewService(subRepository, emailService),
+		EmailService:        emailService,
+		SubRepository:       *subRepository,
+		Notificator:         notificator,
 
-		router: router,
-		srv:    apiServer,
-		db:     db,
+		Router: router,
+		Srv:    apiServer,
+		Db:     db,
 	}
 
 	return srvContainer
@@ -146,26 +152,26 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 	a.log.Println("Starting server on", a.cfg.Server.Address)
 
 	defer func() {
-		if err := srvContainer.srv.Close(); err != nil {
+		if err := srvContainer.Srv.Close(); err != nil {
 			a.log.Println("Error stopping server:", err)
 		}
 	}()
 
-	subHandler := subscription.NewHandler(srvContainer.subscriptionService)
-	weatherHandler := weather.NewHandler(srvContainer.weatherService)
+	subHandler := subscription.NewHandler(srvContainer.SubscriptionService)
+	weatherHandler := weather.NewHandler(srvContainer.WeatherService)
 
-	api := srvContainer.router.Group("/api")
+	api := srvContainer.Router.Group("/api")
 	{
 		api.GET("/weather", weatherHandler.GetWeather)
 		api.POST("/subscribe", subHandler.Subscribe)
 		api.GET("/confirm/:token", subHandler.Confirm)
 		api.GET("/unsubscribe/:token", subHandler.Unsubscribe)
 	}
-	srvContainer.router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
+	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
 
-	srvContainer.notificator.Start(context.Background())
+	srvContainer.Notificator.Start(context.Background())
 
-	if err := srvContainer.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err := srvContainer.Srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 
@@ -182,19 +188,19 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 func (a *App) Stop(srvContainer ServiceContainer) error {
 	a.log.Println("Stopping application…")
 
-	srvContainer.notificator.Stop()
+	srvContainer.Notificator.Stop()
 	a.log.Println("Notifier stopped")
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
 	defer cancel()
 
-	if err := srvContainer.srv.Shutdown(ctx); err != nil {
+	if err := srvContainer.Srv.Shutdown(ctx); err != nil {
 		a.log.Println("HTTP shutdown error:", err)
 	} else {
 		a.log.Println("HTTP server stopped")
 	}
 
-	if err := srvContainer.db.Close(); err != nil {
+	if err := srvContainer.Db.Close(); err != nil {
 		a.log.Println("DB close error:", err)
 	} else {
 		a.log.Println("Database closed")
@@ -204,8 +210,12 @@ func (a *App) Stop(srvContainer ServiceContainer) error {
 	return nil
 }
 
-func createSqliteDb() (*sql.DB, error) {
-	db, err := sql.Open("sqlite", "file:weather.db?cache=shared&mode=rwc")
+func CreateSqliteDb(dialect, name string) (*sql.DB, error) {
+	if name == "" {
+		return nil, errors.New("database name cannot be empty")
+	}
+	connectionString := "file:" + name + "?cache=shared&mode=rwc"
+	db, err := sql.Open(dialect, connectionString)
 	if err != nil {
 		return nil, err
 	}
@@ -217,12 +227,13 @@ func createSqliteDb() (*sql.DB, error) {
 	return db, nil
 }
 
-func initSqliteDb(db *sql.DB) error {
-	if err := goose.SetDialect("sqlite3"); err != nil {
+func InitSqliteDb(db *sql.DB, dialect, migrationPath string) error {
+	log.Println("Initializing migrations:", migrationPath)
+	if err := goose.SetDialect(dialect); err != nil {
 		return err
 	}
 
-	if err := goose.Up(db, "./migrations"); err != nil {
+	if err := goose.Up(db, migrationPath); err != nil {
 		return err
 	}
 

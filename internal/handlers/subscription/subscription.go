@@ -1,13 +1,23 @@
 package subscription
 
 import (
+	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
+var ErrSubscriptionExists = errors.New("subscription already exists")
+
+type UserSubData struct {
+	Email     string `json:"email" binding:"required,email"`
+	City      string `json:"city" binding:"required"`
+	Frequency string `json:"frequency" binding:"required,oneof=hourly daily"`
+}
+
 type subscriber interface {
-	Subscribe(email, city, frequency string) error
+	Subscribe(data UserSubData) error
 	Confirm(token string) (bool, error)
 	Unsubscribe(token string) (bool, error)
 }
@@ -34,15 +44,20 @@ func NewHandler(svc subscriber) *Handler {
 // @Failure 500
 // @Router /subscribe [post]
 func (h *Handler) Subscribe(c *gin.Context) {
-	email := c.PostForm("email")
-	city := c.PostForm("city")
-	frequency := c.PostForm("frequency")
-	if email == "" || city == "" || frequency == "" {
+	var userData UserSubData
+	if err := c.ShouldBind(&userData); err != nil {
+		log.Printf("Failed to bind user data: %s", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required fields"})
 		return
 	}
-	err := h.Service.Subscribe(email, city, frequency)
+
+	err := h.Service.Subscribe(userData)
 	if err != nil {
+		if errors.Is(err, ErrSubscriptionExists) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Email and city already subscribed"})
+			return
+		}
+		log.Printf("Failed to subscribe with that error: %s", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -60,17 +75,18 @@ func (h *Handler) Subscribe(c *gin.Context) {
 // @Failure 404
 // @Router /confirm/{token} [get]
 func (h *Handler) Confirm(c *gin.Context) {
+	log.Printf("token: %s", c.Param("token"))
 	token := c.Param("token")
 	ok, err := h.Service.Confirm(token)
 	if err != nil {
-		c.Writer.WriteHeader(http.StatusInternalServerError)
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	if !ok {
-		c.Writer.WriteHeader(http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	c.Writer.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }
 
 // Unsubscribe
@@ -86,12 +102,12 @@ func (h *Handler) Unsubscribe(c *gin.Context) {
 	token := c.Param("token")
 	ok, err := h.Service.Unsubscribe(token)
 	if err != nil {
-		c.Writer.WriteHeader(http.StatusInternalServerError)
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	if !ok {
-		c.Writer.WriteHeader(http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	c.Writer.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }

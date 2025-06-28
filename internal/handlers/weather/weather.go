@@ -3,6 +3,7 @@ package weather
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
@@ -10,17 +11,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const timeoutDuration = 5 * time.Second
+const timeoutDuration = 10 * time.Second
 
-type servicer interface {
+type weatherGetterService interface {
 	GetByCity(ctx context.Context, city string) (models.WeatherData, error)
 }
 
 type Handler struct {
-	service servicer
+	service weatherGetterService
 }
 
-func NewHandler(svc servicer) *Handler {
+func NewHandler(svc weatherGetterService) *Handler {
 	return &Handler{service: svc}
 }
 
@@ -46,6 +47,10 @@ func (h *Handler) GetWeather(c *gin.Context) {
 
 	data, err := h.service.GetByCity(ctxWithTimeout, city)
 	if err != nil {
+		if strings.Contains(err.Error(), "status 404") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "City not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
