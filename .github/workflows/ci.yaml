@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up env
-        uses: .github/actions/setup
+        uses: ./.github/actions/setup
         with:
           go-version-file: 'go.mod'
           install-swaggo: 'true'
