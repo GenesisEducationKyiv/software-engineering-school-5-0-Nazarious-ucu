@@ -17,10 +17,26 @@ type Email struct {
 	From     string `envconfig:"EMAIL_FROM"     required:"true"`
 }
 
+type Db struct {
+	Dialect        string `envconfig:"DB_DIALECT" default:"sqlite"`
+	Source         string `envconfig:"DB_NAME" default:"subscriptions.db"`
+	MigrationsPath string `envconfig:"DB_MIGRATIONS_DIR"     default:"./migrations"`
+}
+
+type NotifierFrequency struct {
+	DailyFrequency  string `envconfig:"NOTIFIER_FREQUENCY" default:"0 0 9 * *"`
+	HourlyFrequency string `envconfig:"NOTIFIER_HOURLY_FREQUENCY" default:"0 * * * *"`
+}
+
 type Config struct {
 	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
+	WeatherAPIURL string `envconfig:"WEATHER_API_URL" required:"true"`
 	Server        Server
 	Email         Email
+	DB            Db
+	NotifierFreq  NotifierFrequency
+
+	TemplatesDir string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
 }
 
 func NewConfig() (*Config, error) {

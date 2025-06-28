@@ -19,15 +19,16 @@ type Service struct {
 	APIKey string
 	client HTTPClient
 	logger *log.Logger
+	apiURL string
 }
 
-func NewService(apiKey string, httpClient HTTPClient, logger *log.Logger) *Service {
-	return &Service{APIKey: apiKey, client: httpClient, logger: logger}
+func NewService(apiKey string, httpClient HTTPClient, logger *log.Logger, apiURL string) *Service {
+	return &Service{APIKey: apiKey, client: httpClient, logger: logger, apiURL: apiURL}
 }
 
 func (s *Service) GetByCity(ctx context.Context, city string) (models.WeatherData, error) {
 	fmt.Println("Getting weather with API token: ", s.APIKey)
-	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", s.APIKey, city)
+	url := fmt.Sprintf("%s?key=%s&q=%s", s.apiURL, s.APIKey, city)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

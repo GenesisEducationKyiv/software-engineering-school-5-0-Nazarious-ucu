@@ -16,7 +16,6 @@ tasks:
     cmds:
       - docker-compose down
 
-
   lint:
     desc: "Run golangci-lint"
     deps:
@@ -65,5 +64,20 @@ tasks:
       - install:goose
     cmds:
       - goose -dir migrations sqlite3 subscriptions.db status
+
+  test:unit:
+    desc: "Run unit tests"
+    cmds:
+      - go test -v ./...
+
+  test:integration:
+    desc: "Run integration tests (requires docker-compose.test.yml)"
+    dotenv:
+      - .env
+    cmds:
+      - docker compose -f docker-compose.test.yml up -d
+      - sleep 2
+      - go test -v -tags=integration ./...
+      - docker compose -f docker-compose.test.yml down
 
 
