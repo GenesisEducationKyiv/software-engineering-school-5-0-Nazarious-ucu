@@ -162,7 +162,11 @@ func (a *App) Stop(srvContainer ServiceContainer) error {
 }
 
 func CreateSqliteDb(dialect, name string) (*sql.DB, error) {
-	db, err := sql.Open(dialect, "file:weather.Db?cache=shared&mode=rwc")
+	if name == "" {
+		return nil, errors.New("database name cannot be empty")
+	}
+	connectionString := "file:" + name + "?cache=shared&mode=rwc"
+	db, err := sql.Open(dialect, connectionString)
 	if err != nil {
 		return nil, err
 	}

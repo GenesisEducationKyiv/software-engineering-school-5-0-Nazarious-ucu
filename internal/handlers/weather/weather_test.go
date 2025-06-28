@@ -26,9 +26,9 @@ type mockService struct {
 func (m *mockService) GetByCity(ctx context.Context, city string) (models.WeatherData, error) {
 	args := m.Called(ctx, city)
 
-	data, err := args.Get(0).(models.WeatherData)
+	data, ok := args.Get(0).(models.WeatherData)
 
-	if err == false {
+	if !ok {
 		return models.WeatherData{}, args.Error(1)
 	}
 

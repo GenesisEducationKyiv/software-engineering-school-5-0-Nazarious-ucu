@@ -28,8 +28,8 @@ func (m *mockRepo) GetConfirmedByFrequency(
 	ctx context.Context,
 ) ([]models.Subscription, error) {
 	args := m.Called(frequency, ctx)
-	data, err := args.Get(0).([]models.Subscription)
-	if err == false {
+	data, ok := args.Get(0).([]models.Subscription)
+	if !ok {
 		return []models.Subscription{}, nil
 	}
 	return data, args.Error(1)
@@ -46,8 +46,8 @@ type mockWeather struct {
 
 func (m *mockWeather) GetByCity(ctx context.Context, city string) (models.WeatherData, error) {
 	args := m.Called(ctx, city)
-	data, err := args.Get(0).(models.WeatherData)
-	if err == false {
+	data, ok := args.Get(0).(models.WeatherData)
+	if !ok {
 		return models.WeatherData{}, args.Error(1)
 	}
 
