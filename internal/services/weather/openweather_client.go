@@ -32,7 +32,8 @@ type ClientOpenWeatherMap struct {
 }
 
 func NewOpenWeatherMapClient(apiKey, apiURL string,
-	httpClient HTTPClient, logger *log.Logger) *ClientOpenWeatherMap {
+	httpClient HTTPClient, logger *log.Logger,
+) *ClientOpenWeatherMap {
 	return &ClientOpenWeatherMap{APIKey: apiKey, apiURL: apiURL, client: httpClient, logger: logger}
 }
 

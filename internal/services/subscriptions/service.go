@@ -1,6 +1,7 @@
 package subscriptions
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 
@@ -14,9 +15,9 @@ type ConfirmationEmailer interface {
 }
 
 type SubscriptionRepository interface {
-	Create(data subscription.UserSubData, token string) error
-	Confirm(token string) (bool, error)
-	Unsubscribe(token string) (bool, error)
+	Create(ctx context.Context, data subscription.UserSubData, token string) error
+	Confirm(ctx context.Context, token string) (bool, error)
+	Unsubscribe(ctx context.Context, token string) (bool, error)
 }
 
 type Service struct {
@@ -33,24 +34,24 @@ func NewService(repo SubscriptionRepository,
 	}
 }
 
-func (s *Service) Subscribe(data subscription.UserSubData) error {
+func (s *Service) Subscribe(ctx context.Context, data subscription.UserSubData) error {
 	tokenBytes := make([]byte, bytesNum)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		return err
 	}
 	token := hex.EncodeToString(tokenBytes)
 
-	if err := s.repo.Create(data, token); err != nil {
+	if err := s.repo.Create(ctx, data, token); err != nil {
 		return err
 	}
 
 	return s.emailer.SendConfirmation(data.Email, token)
 }
 
-func (s *Service) Confirm(token string) (bool, error) {
-	return s.repo.Confirm(token)
+func (s *Service) Confirm(ctx context.Context, token string) (bool, error) {
+	return s.repo.Confirm(ctx, token)
 }
 
-func (s *Service) Unsubscribe(token string) (bool, error) {
-	return s.repo.Unsubscribe(token)
+func (s *Service) Unsubscribe(ctx context.Context, token string) (bool, error) {
+	return s.repo.Unsubscribe(ctx, token)
 }

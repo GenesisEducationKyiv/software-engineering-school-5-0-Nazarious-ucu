@@ -19,7 +19,7 @@ const (
 
 type subscriptionRepository interface {
 	GetConfirmedByFrequency(frequency string, ctx context.Context) ([]models.Subscription, error)
-	UpdateLastSent(subscriptionID int) error
+	UpdateLastSent(subscriptionID int, ctx context.Context) error
 }
 
 type emailSender interface {
@@ -120,5 +120,5 @@ func (n *Notifier) SendOne(ctx context.Context, sub models.Subscription) error {
 		return err
 	}
 
-	return n.repo.UpdateLastSent(sub.ID)
+	return n.repo.UpdateLastSent(sub.ID, ctx)
 }
