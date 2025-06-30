@@ -3,6 +3,7 @@
 package subscription_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -21,19 +22,19 @@ type mockService struct {
 	mock.Mock
 }
 
-func (m *mockService) Subscribe(data subscription.UserSubData) error {
-	args := m.Called(data)
+func (m *mockService) Subscribe(ctx context.Context, data subscription.UserSubData) error {
+	args := m.Called(ctx, data)
 
 	return args.Error(0)
 }
 
-func (m *mockService) Confirm(token string) (bool, error) {
-	args := m.Called(token)
+func (m *mockService) Confirm(ctx context.Context, token string) (bool, error) {
+	args := m.Called(ctx, token)
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *mockService) Unsubscribe(token string) (bool, error) {
-	args := m.Called(token)
+func (m *mockService) Unsubscribe(ctx context.Context, token string) (bool, error) {
+	args := m.Called(ctx, token)
 
 	return args.Bool(0), args.Error(1)
 }
@@ -73,7 +74,7 @@ func TestSubscribeEndpoint(t *testing.T) {
 			c, _ := gin.CreateTestContext(rec)
 
 			m := &mockService{}
-			m.On("Subscribe", mock.Anything).Return(tc.mockErr).Maybe()
+			m.On("Subscribe", mock.Anything, mock.Anything).Return(tc.mockErr).Maybe()
 
 			t.Cleanup(func() {
 				m.AssertExpectations(t)
@@ -133,7 +134,7 @@ func TestConfirmEndpoint(t *testing.T) {
 
 			m := &mockService{}
 
-			m.On("Confirm", mock.Anything).Return(tc.mockOK, tc.mockErr).Once()
+			m.On("Confirm", mock.Anything, mock.Anything).Return(tc.mockOK, tc.mockErr).Once()
 
 			t.Cleanup(func() {
 				m.AssertExpectations(t)
@@ -191,7 +192,7 @@ func TestUnsubscribeEndpoint(t *testing.T) {
 
 			m := &mockService{}
 
-			m.On("Unsubscribe", mock.Anything).Return(tc.mockOK, tc.mockErr).Once()
+			m.On("Unsubscribe", mock.Anything, mock.Anything).Return(tc.mockOK, tc.mockErr).Once()
 
 			t.Cleanup(func() {
 				m.AssertExpectations(t)

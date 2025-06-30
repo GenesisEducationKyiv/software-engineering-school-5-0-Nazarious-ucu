@@ -35,8 +35,8 @@ func (m *mockRepo) GetConfirmedByFrequency(
 	return data, args.Error(1)
 }
 
-func (m *mockRepo) UpdateLastSent(subscriptionID int) error {
-	args := m.Called(subscriptionID)
+func (m *mockRepo) UpdateLastSent(subscriptionID int, ctx context.Context) error {
+	args := m.Called(ctx, subscriptionID)
 	return args.Error(0)
 }
 
@@ -74,7 +74,7 @@ func Test_sendOne_Success(t *testing.T) {
 	mockW := &mockWeather{}
 	mockE := &mockEmail{}
 
-	mockR.On("UpdateLastSent", sub.ID).Return(nil)
+	mockR.On("UpdateLastSent", mock.Anything, sub.ID).Return(nil)
 
 	forecast := models.WeatherData{City: city, Temperature: 5.0, Condition: "Sunny"}
 	mockW.On("GetByCity", mock.Anything, city).Return(forecast, nil)
@@ -147,8 +147,8 @@ func Test_runDue_Success(t *testing.T) {
 	em := &mockEmail{}
 
 	rm.On("GetConfirmedByFrequency", freqTest, mock.Anything).Return(subs, nil)
-	rm.On("UpdateLastSent", 10).Return(nil)
-	rm.On("UpdateLastSent", 20).Return(nil)
+	rm.On("UpdateLastSent", mock.Anything, 10).Return(nil)
+	rm.On("UpdateLastSent", mock.Anything, 20).Return(nil)
 
 	// weather calls
 	wm.On("GetByCity", mock.Anything, city1).Return(models.WeatherData{City: city1}, nil)

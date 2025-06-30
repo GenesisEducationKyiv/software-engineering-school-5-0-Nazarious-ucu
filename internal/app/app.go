@@ -65,7 +65,10 @@ func New(cfg config.Config, logger *log.Logger) *App {
 func (a *App) Init() ServiceContainer {
 	a.log.Println("Initializing application with configuration:", a.cfg)
 
-	db, err := CreateSqliteDb(a.cfg.DB.Dialect, a.cfg.DB.Source)
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	defer cancel()
+
+	db, err := CreateSqliteDb(ctx, a.cfg.DB.Dialect, a.cfg.DB.Source)
 	if err != nil {
 		a.log.Panic(err)
 	}
@@ -174,7 +177,10 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 	}
 	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
 
-	srvContainer.Notificator.Start(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	defer cancel()
+
+	srvContainer.Notificator.Start(ctx)
 
 	if err := srvContainer.Srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
@@ -215,7 +221,7 @@ func (a *App) Stop(srvContainer ServiceContainer) error {
 	return nil
 }
 
-func CreateSqliteDb(dialect, name string) (*sql.DB, error) {
+func CreateSqliteDb(ctx context.Context, dialect, name string) (*sql.DB, error) {
 	if name == "" {
 		return nil, errors.New("database name cannot be empty")
 	}
@@ -225,7 +231,7 @@ func CreateSqliteDb(dialect, name string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		return nil, err
 	}
 

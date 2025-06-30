@@ -28,7 +28,7 @@ func (r *SubscriptionRepository) Create(
 	token string,
 ) error {
 	var cnt int
-	err := r.DB.QueryRow(
+	err := r.DB.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM subscriptions WHERE email = ? AND city = ?`,
 		data.Email, data.City,
 	).Scan(&cnt)
