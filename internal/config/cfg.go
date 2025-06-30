@@ -28,6 +28,12 @@ type NotifierFrequency struct {
 	HourlyFrequency string `envconfig:"NOTIFIER_HOURLY_FREQUENCY" default:"0 * * * *"`
 }
 
+type Redis struct {
+	Host     string `envconfig:"REDIS_HOST" default:"localhost"`
+	Port     string `envconfig:"REDIS_PORT" default:"6379"`
+	Password string `envconfig:"REDIS_PASSWORD" required:"true"`
+}
+
 type Config struct {
 	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
 	WeatherAPIURL string `envconfig:"WEATHER_API_URL" required:"true"`
@@ -42,6 +48,7 @@ type Config struct {
 	Email        Email
 	DB           Db
 	NotifierFreq NotifierFrequency
+	Redis        Redis
 
 	TemplatesDir string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
 	LogsPath     string `envconfig:"LOGS_PATH" default:"./log/weather-subscription-api.log"`

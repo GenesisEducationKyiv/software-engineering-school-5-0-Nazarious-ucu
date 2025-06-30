@@ -10,6 +10,11 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/cache"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather/decorators"
+	"github.com/redis/go-redis/v9"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/logger"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -36,6 +41,8 @@ const (
 	timeoutDuration = 5 * time.Second
 
 	fileMode = 0o644
+
+	liveTime = 24 * time.Hour
 )
 
 type App struct {
@@ -44,7 +51,7 @@ type App struct {
 }
 
 type ServiceContainer struct {
-	WeatherService      *serviceWeather.ServiceProvider
+	WeatherService      *decorators.CachedService
 	SubscriptionService *subscriptions.Service
 	EmailService        *email.Service
 	Notificator         *notifier.Notifier
@@ -76,6 +83,8 @@ func (a *App) Init() ServiceContainer {
 	if err := InitSqliteDb(db, a.cfg.DB.Dialect, a.cfg.DB.MigrationsPath); err != nil {
 		a.log.Panic(err)
 	}
+
+	redisClient := newRedisConnection(a.cfg.Redis.Host+a.cfg.Redis.Port, a.cfg.Redis.Password)
 
 	router := gin.Default()
 
@@ -133,6 +142,11 @@ func (a *App) Init() ServiceContainer {
 		weatherAPIClient,
 		openWeatherMapClient,
 		weatherBitClient)
+
+	cahceRedisClient := cache.NewRedisClient[models.WeatherData](redisClient, a.log)
+
+	cacheDecorator := decorators.NewCachedService(weatherService, cahceRedisClient, a.log, liveTime)
+
 	notificator := notifier.New(subRepository,
 		weatherService,
 		emailService,
@@ -142,7 +156,7 @@ func (a *App) Init() ServiceContainer {
 	)
 
 	srvContainer := ServiceContainer{
-		WeatherService:      weatherService,
+		WeatherService:      cacheDecorator,
 		SubscriptionService: subscriptions.NewService(subRepository, emailService),
 		EmailService:        emailService,
 		SubRepository:       *subRepository,
@@ -268,4 +282,12 @@ func newFileLogger(filePath string) (*zap.Logger, error) {
 		zap.InfoLevel,
 	)
 	return zap.New(core), nil
+}
+
+func newRedisConnection(connString, password string) *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr:     connString,
+		Password: password,
+		DB:       0,
+	})
 }
