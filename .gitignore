@@ -3,4 +3,4 @@
 *.sqlite
 *.db
 /.env
-weather.Db
+**/weather.Db
