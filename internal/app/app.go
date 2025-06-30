@@ -38,10 +38,6 @@ const (
 	fileMode = 0o644
 )
 
-type LoggerRoundTripper interface {
-	RoundTrip(*http.Request) (*http.Response, error)
-}
-
 type App struct {
 	cfg config.Config
 	log *log.Logger

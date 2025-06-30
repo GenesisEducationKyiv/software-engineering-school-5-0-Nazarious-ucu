@@ -8,9 +8,9 @@ RUN go mod download
 COPY . .
 
 RUN go install github.com/swaggo/swag/cmd/swag@latest
-RUN /go/bin/swag init -g cmd/WeatherSubscriptionAPI/main.go
+RUN /go/bin/swag init -g ./main/main.go
 
-RUN CGO_ENABLED=0 go build -o weather-app ./cmd/WeatherSubscriptionAPI
+RUN CGO_ENABLED=0 go build -o weather-app ./main/main.go
 
 
 FROM alpine:3.20
