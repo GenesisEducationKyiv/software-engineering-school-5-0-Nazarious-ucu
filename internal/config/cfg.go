@@ -31,17 +31,20 @@ type NotifierFrequency struct {
 type Config struct {
 	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
 	WeatherAPIURL string `envconfig:"WEATHER_API_URL" required:"true"`
-	Server        Server
-	Email         Email
-	DB            Db
-	NotifierFreq  NotifierFrequency
 
-	TemplatesDir         string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
 	OpenWeatherMapAPIKey string `envconfig:"OPEN_WEATHER_MAP_API_KEY" required:"true"`
 	OpenWeatherMapURL    string `envconfig:"OPEN_WEATHER_MAP_URL" required:"true"`
-	WeatherBitAPIKey     string `envconfig:"WEATHER_BIT_API_KEY" required:"true"`
-	WeatherBitURL        string `envconfig:"WEATHER_BIT_URL" required:"true"`
-	LogsPath             string `envconfig:"LOGS_PATH" default:"./log/weather-subscription-api.log"`
+
+	WeatherBitAPIKey string `envconfig:"WEATHER_BIT_API_KEY" required:"true"`
+	WeatherBitURL    string `envconfig:"WEATHER_BIT_URL" required:"true"`
+
+	Server       Server
+	Email        Email
+	DB           Db
+	NotifierFreq NotifierFrequency
+
+	TemplatesDir string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
+	LogsPath     string `envconfig:"LOGS_PATH" default:"./log/weather-subscription-api.log"`
 }
 
 func NewConfig() (*Config, error) {
