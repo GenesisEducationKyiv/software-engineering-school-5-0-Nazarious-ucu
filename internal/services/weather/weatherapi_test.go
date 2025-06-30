@@ -59,7 +59,7 @@ func TestGetByCity_Success(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewWeatherAPIClient("1234567890", "", m, log.Default())
+	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, log.Default())
 
 	weatherService := weather.NewService(log.Default(), weatherAPIClient)
 
@@ -85,7 +85,7 @@ func TestGetByCity_CityNotFound(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewWeatherAPIClient("1234567890", "", m, log.Default())
+	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, log.Default())
 	weatherService := weather.NewService(log.Default(), weatherAPIClient)
 
 	data, err := weatherService.GetByCity(ctx, "UnknownCity")
@@ -108,7 +108,7 @@ func TestGetByCity_APIError(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewWeatherAPIClient("1234567890", "", m, log.Default())
+	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, log.Default())
 	weatherService := weather.NewService(log.Default(), weatherAPIClient)
 
 	data, err := weatherService.GetByCity(ctx, "London")
@@ -131,7 +131,7 @@ func TestGetByCity_InvalidAPIKey(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewWeatherAPIClient("1234567890", "", m, log.Default())
+	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, log.Default())
 	weatherService := weather.NewService(log.Default(), weatherAPIClient)
 
 	data, err := weatherService.GetByCity(ctx, "London")
@@ -151,7 +151,7 @@ func TestGetByCity_InvalidAPIKey(t *testing.T) {
 //		m.AssertExpectations(t)
 //	})
 //
-//	weatherAPIClient := weather.NewWeatherAPIClient("1234567890", m, log.Default())
+//	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", m, log.Default())
 //	weatherService := weather.NewService(log.Default(), weatherAPIClient)
 //
 //	data, err := weatherService.GetByCity(ctx, "London")

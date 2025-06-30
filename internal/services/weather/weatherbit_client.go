@@ -28,7 +28,7 @@ type ClientWeatherBit struct {
 	logger *log.Logger
 }
 
-func NewWeatherBitClient(apiKey, apiURL string, httpClient HTTPClient, logger *log.Logger) *ClientWeatherBit {
+func NewClientWeatherBit(apiKey, apiURL string, httpClient HTTPClient, logger *log.Logger) *ClientWeatherBit {
 	return &ClientWeatherBit{APIKey: apiKey, apiURL: apiURL, client: httpClient, logger: logger}
 }
 

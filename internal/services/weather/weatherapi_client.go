@@ -18,7 +18,7 @@ type ClientWeatherAPI struct {
 	apiURL string
 }
 
-func NewWeatherAPIClient(apiKey, apiURL string, httpClient HTTPClient, logger *log.Logger) *ClientWeatherAPI {
+func NewClientWeatherAPI(apiKey, apiURL string, httpClient HTTPClient, logger *log.Logger) *ClientWeatherAPI {
 	return &ClientWeatherAPI{APIKey: apiKey, client: httpClient, logger: logger, apiURL: apiURL}
 }
 

@@ -105,21 +105,21 @@ func (a *App) Init() ServiceContainer {
 	httpLogClient := &http.Client{
 		Transport: loggerT,
 	}
-	openWeatherMapClient := serviceWeather.NewOpenWeatherMapClient(
+	openWeatherMapClient := serviceWeather.NewClientOpenWeatherMap(
 		a.cfg.OpenWeatherMapAPIKey,
 		a.cfg.OpenWeatherMapURL,
 		httpLogClient,
 		a.log,
 	)
 
-	weatherAPIClient := serviceWeather.NewWeatherAPIClient(
+	weatherAPIClient := serviceWeather.NewClientWeatherAPI(
 		a.cfg.WeatherAPIKey,
 		a.cfg.WeatherAPIURL,
 		httpLogClient,
 		a.log,
 	)
 
-	weatherBitClient := serviceWeather.NewWeatherBitClient(
+	weatherBitClient := serviceWeather.NewClientWeatherBit(
 		a.cfg.WeatherBitAPIKey,
 		a.cfg.WeatherBitURL,
 		httpLogClient,
