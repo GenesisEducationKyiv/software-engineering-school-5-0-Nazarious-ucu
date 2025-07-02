@@ -43,14 +43,19 @@ func TestMain(m *testing.M) {
 
 	cfg.Email.Host = "localhost"
 	cfg.Email.Port = "1025"
+
 	cfg.DB.Source = "test.db"
+	cfg.DB.MigrationsPath = "../../migrations"
+
 	cfg.WeatherAPIURL = testWeatherAPIServer.URL
 	cfg.WeatherAPIKey = "secret-key-weatherapi"
+
 	cfg.OpenWeatherMapAPIKey = "secret-key-open-weather"
 	cfg.OpenWeatherMapURL = testOpenWeatherAPIServer.URL
+
 	cfg.WeatherBitAPIKey = "secret-key-weatherbit"
 	cfg.WeatherBitURL = testWeatherBitAPIServer.URL
-	cfg.DB.MigrationsPath = "../../migrations"
+
 	cfg.Server.Address = "127.0.0.1:8081"
 
 	application := app.New(*cfg, log.Default())

@@ -2,19 +2,18 @@ package weather
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 	"github.com/sony/gobreaker"
 )
 
-const (
-	timeInterval = time.Duration(30) * time.Second
-	timeTimeOut  = time.Duration(15) * time.Second
-
-	repeatNumber = 5
-)
+type BreakerConfig struct {
+	TimeInterval time.Duration
+	TimeTimeOut  time.Duration
+	RepeatNumber uint32
+}
 
 type BreakerClient struct {
 	name    string
@@ -22,14 +21,14 @@ type BreakerClient struct {
 	wrapped client
 }
 
-func NewBreakerClient(name string, wrapped client) *BreakerClient {
+func NewBreakerClient(name string, cfg BreakerConfig, wrapped client) *BreakerClient {
 	settings := gobreaker.Settings{
 		Name:        name,
 		MaxRequests: 1,
-		Interval:    timeInterval,
-		Timeout:     timeTimeOut,
+		Interval:    cfg.TimeInterval,
+		Timeout:     cfg.TimeTimeOut,
 		ReadyToTrip: func(counts gobreaker.Counts) bool {
-			return counts.ConsecutiveFailures >= repeatNumber
+			return counts.ConsecutiveFailures >= cfg.RepeatNumber
 		},
 	}
 	return &BreakerClient{
@@ -45,12 +44,12 @@ func (b *BreakerClient) Fetch(ctx context.Context, city string) (models.WeatherD
 	})
 	if err != nil {
 		return models.WeatherData{},
-			errors.New(b.name + " unavailable: " + err.Error())
+			fmt.Errorf("%s unavailable: %w", b.name, err)
 	}
 	res, ok := result.(models.WeatherData)
 	if !ok {
 		return models.WeatherData{},
-			errors.New(b.name + " unavailable: ")
+			fmt.Errorf("%s returned unexpected result", b.name)
 	}
 	return res, nil
 }

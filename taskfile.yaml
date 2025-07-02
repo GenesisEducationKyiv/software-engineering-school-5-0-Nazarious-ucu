@@ -20,7 +20,6 @@ tasks:
     desc: "Run golangci-lint"
     deps:
       - install:lint
-      - swag-gen
     preconditions:
       - command -v golangci-lint
     cmds:
@@ -83,15 +82,11 @@ tasks:
 
   test:unit:
     desc: "Run unit tests"
-    deps:
-      - swag-gen
     cmds:
       - go test -v -tags=unit ./...
 
   test:integration:
     desc: "Run integration tests (requires docker-compose.test.yml)"
-    deps:
-      - swag-gen
     dotenv:
       - .env.example
     cmds:

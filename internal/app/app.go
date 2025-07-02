@@ -174,7 +174,13 @@ func (a *App) init() ServiceContainer {
 	httpLogClient := &http.Client{
 		Transport: loggerT,
 	}
-	openWeatherMapClient := serviceWeather.NewBreakerClient("OpenWeather",
+
+	breakerCfg := serviceWeather.BreakerConfig{
+		TimeInterval: time.Duration(a.cfg.Breaker.TimeInterval) * time.Second,
+		TimeTimeOut:  time.Duration(a.cfg.Breaker.TimeTimeOut) * time.Second,
+		RepeatNumber: a.cfg.Breaker.RepeatNumber,
+	}
+	openWeatherMapClient := serviceWeather.NewBreakerClient("OpenWeather", breakerCfg,
 		serviceWeather.NewClientOpenWeatherMap(
 			a.cfg.OpenWeatherMapAPIKey,
 			a.cfg.OpenWeatherMapURL,
@@ -183,7 +189,7 @@ func (a *App) init() ServiceContainer {
 		),
 	)
 
-	weatherAPIClient := serviceWeather.NewBreakerClient("WeatherAPI",
+	weatherAPIClient := serviceWeather.NewBreakerClient("WeatherAPI", breakerCfg,
 		serviceWeather.NewClientWeatherAPI(
 			a.cfg.WeatherAPIKey,
 			a.cfg.WeatherAPIURL,
@@ -192,7 +198,7 @@ func (a *App) init() ServiceContainer {
 		),
 	)
 
-	weatherBitClient := serviceWeather.NewBreakerClient("WeatherBit",
+	weatherBitClient := serviceWeather.NewBreakerClient("WeatherBit", breakerCfg,
 		serviceWeather.NewClientWeatherBit(
 			a.cfg.WeatherBitAPIKey,
 			a.cfg.WeatherBitURL,

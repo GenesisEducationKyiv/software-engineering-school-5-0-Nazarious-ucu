@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather"
 
@@ -12,6 +13,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+var breakerCfg = weather.BreakerConfig{
+	TimeInterval: 30 * time.Second,
+	TimeTimeOut:  15 * time.Second,
+	RepeatNumber: 5,
+}
 
 type mockWrapped struct {
 	mock.Mock
@@ -40,7 +47,7 @@ func TestBreakerClient_Success(t *testing.T) {
 		Return(expected, nil).
 		Once()
 
-	bc := weather.NewBreakerClient(breakerName, wrapped)
+	bc := weather.NewBreakerClient(breakerName, breakerCfg, wrapped)
 
 	data, err := bc.Fetch(context.Background(), city)
 	assert.NoError(t, err)
@@ -59,7 +66,7 @@ func TestBreakerClient_UnderlyingErrorBeforeTrip(t *testing.T) {
 		Return(models.WeatherData{}, underlyingErr).
 		Once()
 
-	bc := weather.NewBreakerClient(breakerName, wrapped)
+	bc := weather.NewBreakerClient(breakerName, breakerCfg, wrapped)
 
 	data, err := bc.Fetch(context.Background(), city)
 	assert.Error(t, err)
@@ -81,7 +88,7 @@ func TestBreakerClient_TripCircuitAfterFiveFailures(t *testing.T) {
 			Once()
 	}
 
-	bc := weather.NewBreakerClient(breakerName, wrapped)
+	bc := weather.NewBreakerClient(breakerName, breakerCfg, wrapped)
 
 	for i := 1; i <= 5; i++ {
 		_, err := bc.Fetch(context.Background(), city)

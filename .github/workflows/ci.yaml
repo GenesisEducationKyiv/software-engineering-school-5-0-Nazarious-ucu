@@ -16,13 +16,9 @@ jobs:
         uses: ./.github/actions/setup
         with:
           go-version-file: 'go.mod'
-          install-swaggo: 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: run Swag
-        run: swag init --parseDependency --parseInternal --output ../docs -g ./main.go
-        working-directory: ./main
 
       - name: Run Linter
         run: task lint
@@ -55,11 +51,6 @@ jobs:
         uses: ./.github/actions/setup
         with:
           go-version-file: 'go.mod'
-          install-swaggo: 'true'
-
-      - name: run Swag
-        run: swag init --parseDependency --parseInternal --output ../docs -g ./main.go
-        working-directory: ./main
 
       - name: Run Unit Tests
         run: task test:unit
@@ -76,11 +67,6 @@ jobs:
         with:
           go-version-file: 'go.mod'
           install-goose: 'true'
-          install-swaggo: 'true'
-
-      - name: run Swag
-        run: swag init --parseDependency --parseInternal --output ../docs -g ./main.go
-        working-directory: ./main
 
       - name: Run Integration Tests
         run: task test:integration

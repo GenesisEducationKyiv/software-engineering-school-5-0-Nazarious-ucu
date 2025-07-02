@@ -28,6 +28,12 @@ type NotifierFrequency struct {
 	HourlyFrequency string `envconfig:"NOTIFIER_HOURLY_FREQUENCY" default:"0 * * * *"`
 }
 
+type Breaker struct {
+	TimeInterval int    `envconfig:"BREAKER_INTERVAL" default:"30"`
+	TimeTimeOut  int    `envconfig:"BREAKER_TIMEOUT" default:"10"`
+	RepeatNumber uint32 `envconfig:"BREAKER_REPEAT_NUM" default:"5"`
+}
+
 type Config struct {
 	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
 	WeatherAPIURL string `envconfig:"WEATHER_API_URL" required:"true"`
@@ -42,6 +48,7 @@ type Config struct {
 	Email        Email
 	DB           Db
 	NotifierFreq NotifierFrequency
+	Breaker      Breaker
 
 	TemplatesDir string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
 	LogsPath     string `envconfig:"LOGS_PATH" default:"./log/weather-subscription-api.log"`
