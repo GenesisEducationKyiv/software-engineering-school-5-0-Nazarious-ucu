@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/joho/godotenv"
@@ -15,7 +16,7 @@ import (
 // @host localhost:8080
 // @BasePath /api/
 func main() {
-	if err := godotenv.Load(".env.sample"); err != nil {
+	if err := godotenv.Load(".env"); err != nil {
 		log.Printf("No .env file found: %v", err)
 	}
 
@@ -24,13 +25,11 @@ func main() {
 		log.Panicf("failed to load configuration: %v", err)
 	}
 
-	logger := log.New(log.Writer(), "WeatherSubscriptionAPI: ", log.LstdFlags)
+	l := log.New(log.Writer(), "WeatherSubscriptionAPI: ", log.LstdFlags)
 
-	application := app.New(*cfg, logger)
+	application := app.New(*cfg, l)
 
-	serviceContainer := application.Init()
-
-	if err := application.Start(serviceContainer); err != nil {
+	if err := application.Start(context.Background()); err != nil {
 		log.Panic(err)
 	}
 }

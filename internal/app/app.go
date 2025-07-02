@@ -6,42 +6,31 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/logger"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/subscriptions"
-	serviceWeather "github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather"
-
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
+	"github.com/gin-gonic/gin"
 	"github.com/pressly/goose/v3"
+	swaggerfiles "github.com/swaggo/files"
+	swagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/zap"
 
 	_ "github.com/Nazarious-ucu/weather-subscription-api/docs"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/emailer"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
-	"github.com/gin-gonic/gin"
-	swaggerfiles "github.com/swaggo/files"
-	swagger "github.com/swaggo/gin-swagger"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/logger"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/subscriptions"
+	serviceWeather "github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather"
+	fLogger "github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 )
 
 const (
 	timeoutDuration = 5 * time.Second
-
-	fileMode = 0o644
 )
-
-type App struct {
-	cfg config.Config
-	log *log.Logger
-}
 
 type ServiceContainer struct {
 	WeatherService      *serviceWeather.ServiceProvider
@@ -50,9 +39,15 @@ type ServiceContainer struct {
 	Notificator         *notifier.Notifier
 	SubRepository       repository.SubscriptionRepository
 
-	Router *gin.Engine
-	Srv    *http.Server
-	Db     *sql.DB
+	Router     *gin.Engine
+	Srv        *http.Server
+	Db         *sql.DB
+	fileLogger *zap.Logger
+}
+
+type App struct {
+	cfg config.Config
+	log *log.Logger
 }
 
 func New(cfg config.Config, logger *log.Logger) *App {
@@ -62,7 +57,84 @@ func New(cfg config.Config, logger *log.Logger) *App {
 	}
 }
 
-func (a *App) Init() ServiceContainer {
+func (a *App) Start(ctx context.Context) error {
+	srvContainer := a.init()
+	a.log.Println("Starting server on", a.cfg.Server.Address)
+
+	defer func() {
+		if err := srvContainer.Srv.Close(); err != nil {
+			a.log.Println("Error stopping server:", err)
+		}
+	}()
+
+	subHandler := subscription.NewHandler(srvContainer.SubscriptionService)
+	weatherHandler := weather.NewHandler(srvContainer.WeatherService)
+
+	api := srvContainer.Router.Group("/api")
+	{
+		api.GET("/weather", weatherHandler.GetWeather)
+		api.POST("/subscribe", subHandler.Subscribe)
+		api.GET("/confirm/:token", subHandler.Confirm)
+		api.GET("/unsubscribe/:token", subHandler.Unsubscribe)
+	}
+	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	srvContainer.Notificator.Start(ctxWithTimeout)
+
+	if err := srvContainer.Srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+
+	<-ctx.Done()
+
+	a.log.Println("Application started successfully on", a.cfg.Server.Address)
+	defer func() {
+		if err := a.Stop(srvContainer); err != nil {
+			a.log.Panicf("failed to shutdown application: %v", err)
+		}
+		a.log.Println("Application shutdown successfully")
+	}()
+	return nil
+}
+
+func (a *App) Stop(srvContainer ServiceContainer) error {
+	a.log.Println("Stopping application…")
+
+	defer func(fileLogger *zap.Logger) {
+		err := fileLogger.Sync()
+		if err != nil {
+			a.log.Printf("failed to sync file logger: %v", err)
+		} else {
+			a.log.Println("File logger synced successfully")
+		}
+	}(srvContainer.fileLogger)
+
+	srvContainer.Notificator.Stop()
+	a.log.Println("Notifier stopped")
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	defer cancel()
+
+	if err := srvContainer.Srv.Shutdown(ctx); err != nil {
+		a.log.Println("HTTP shutdown error:", err)
+	} else {
+		a.log.Println("HTTP server stopped")
+	}
+
+	if err := srvContainer.Db.Close(); err != nil {
+		a.log.Println("DB close error:", err)
+	} else {
+		a.log.Println("Database closed")
+	}
+
+	a.log.Println("Shutdown complete")
+	return nil
+}
+
+func (a *App) init() ServiceContainer {
 	a.log.Println("Initializing application with configuration:", a.cfg)
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
@@ -85,23 +157,17 @@ func (a *App) Init() ServiceContainer {
 		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout) * time.Second,
 	}
 
+	a.log.Printf("Application initialized on address: %s", apiServer.Addr)
+
 	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
 	a.log.Printf("Initializing SMTP service with config: %+v\n", a.cfg.Email)
 	subRepository := repository.NewSubscriptionRepository(db, a.log)
 	emailService := email.NewService(smtpService, a.cfg.TemplatesDir)
 
-	fileLogger, err := newFileLogger(a.cfg.LogsPath)
+	fileLogger, err := fLogger.NewFileLogger(a.cfg.LogsPath)
 	if err != nil {
 		a.log.Panicf("failed to create file logger: %v", err)
 	}
-	defer func(fileLogger *zap.Logger) {
-		err := fileLogger.Sync()
-		if err != nil {
-			a.log.Printf("failed to sync file logger: %v", err)
-		} else {
-			a.log.Println("File logger synced successfully")
-		}
-	}(fileLogger)
 
 	loggerT := logger.NewRoundTripper(fileLogger)
 
@@ -156,71 +222,6 @@ func (a *App) Init() ServiceContainer {
 	return srvContainer
 }
 
-func (a *App) Start(srvContainer ServiceContainer) error {
-	a.log.Println("Starting server on", a.cfg.Server.Address)
-
-	defer func() {
-		if err := srvContainer.Srv.Close(); err != nil {
-			a.log.Println("Error stopping server:", err)
-		}
-	}()
-
-	subHandler := subscription.NewHandler(srvContainer.SubscriptionService)
-	weatherHandler := weather.NewHandler(srvContainer.WeatherService)
-
-	api := srvContainer.Router.Group("/api")
-	{
-		api.GET("/weather", weatherHandler.GetWeather)
-		api.POST("/subscribe", subHandler.Subscribe)
-		api.GET("/confirm/:token", subHandler.Confirm)
-		api.GET("/unsubscribe/:token", subHandler.Unsubscribe)
-	}
-	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
-	defer cancel()
-
-	srvContainer.Notificator.Start(ctx)
-
-	if err := srvContainer.Srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return err
-	}
-
-	a.log.Println("Application started successfully on", a.cfg.Server.Address)
-	defer func() {
-		if err := a.Stop(srvContainer); err != nil {
-			a.log.Panicf("failed to shutdown application: %v", err)
-		}
-		a.log.Println("Application shutdown successfully")
-	}()
-	return nil
-}
-
-func (a *App) Stop(srvContainer ServiceContainer) error {
-	a.log.Println("Stopping application…")
-
-	srvContainer.Notificator.Stop()
-	a.log.Println("Notifier stopped")
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
-	defer cancel()
-
-	if err := srvContainer.Srv.Shutdown(ctx); err != nil {
-		a.log.Println("HTTP shutdown error:", err)
-	} else {
-		a.log.Println("HTTP server stopped")
-	}
-
-	if err := srvContainer.Db.Close(); err != nil {
-		a.log.Println("DB close error:", err)
-	} else {
-		a.log.Println("Database closed")
-	}
-
-	a.log.Println("Shutdown complete")
-	return nil
-}
-
 func CreateSqliteDb(ctx context.Context, dialect, name string) (*sql.DB, error) {
 	if name == "" {
 		return nil, errors.New("database name cannot be empty")
@@ -249,23 +250,4 @@ func InitSqliteDb(db *sql.DB, dialect, migrationPath string) error {
 	}
 
 	return nil
-}
-
-func newFileLogger(filePath string) (*zap.Logger, error) {
-	file, err := os.OpenFile(filepath.Clean(filePath), os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
-	if err != nil {
-		return nil, err
-	}
-
-	writer := zapcore.AddSync(file)
-
-	encoderCfg := zap.NewProductionEncoderConfig()
-	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-
-	core := zapcore.NewCore(
-		zapcore.NewJSONEncoder(encoderCfg),
-		writer,
-		zap.InfoLevel,
-	)
-	return zap.New(core), nil
 }

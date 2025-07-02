@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -82,7 +84,7 @@ func TestPostConfirm(t *testing.T) {
 			var confirmed bool
 			err = db.QueryRowContext(ctx,
 				"SELECT confirmed FROM subscriptions WHERE token = $1", token).Scan(&confirmed)
-			assert.NoError(t, err, "Failed to query subscription status")
+			require.NoError(t, err, "Failed to query subscription status")
 			assert.Equal(t, tc.wantConfirmed, confirmed, "Subscription should be confirmed")
 		})
 	}
