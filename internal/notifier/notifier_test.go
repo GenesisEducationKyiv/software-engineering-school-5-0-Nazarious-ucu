@@ -24,8 +24,8 @@ type mockRepo struct {
 }
 
 func (m *mockRepo) GetConfirmedByFrequency(
-	frequency string,
 	ctx context.Context,
+	frequency string,
 ) ([]models.Subscription, error) {
 	args := m.Called(frequency, ctx)
 	data, ok := args.Get(0).([]models.Subscription)
@@ -35,7 +35,7 @@ func (m *mockRepo) GetConfirmedByFrequency(
 	return data, args.Error(1)
 }
 
-func (m *mockRepo) UpdateLastSent(subscriptionID int, ctx context.Context) error {
+func (m *mockRepo) UpdateLastSent(ctx context.Context, subscriptionID int) error {
 	args := m.Called(ctx, subscriptionID)
 	return args.Error(0)
 }

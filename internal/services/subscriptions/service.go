@@ -14,18 +14,18 @@ type ConfirmationEmailer interface {
 	SendConfirmation(email, token string) error
 }
 
-type SubscriptionRepository interface {
+type subscriptionRepository interface {
 	Create(ctx context.Context, data subscription.UserSubData, token string) error
 	Confirm(ctx context.Context, token string) (bool, error)
 	Unsubscribe(ctx context.Context, token string) (bool, error)
 }
 
 type Service struct {
-	repo    SubscriptionRepository
+	repo    subscriptionRepository
 	emailer ConfirmationEmailer
 }
 
-func NewService(repo SubscriptionRepository,
+func NewService(repo subscriptionRepository,
 	emailService ConfirmationEmailer,
 ) *Service {
 	return &Service{
