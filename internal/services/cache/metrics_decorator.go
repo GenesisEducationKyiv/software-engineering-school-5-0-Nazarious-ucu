@@ -10,17 +10,17 @@ type cache[T any] interface {
 	Get(ctx context.Context, key string, returnValue *T) error
 }
 
-type MetricsCollector interface {
+type metricsCollector interface {
 	ObserveLatency(operation string, duration time.Duration)
 	IncrementCounter(metric string, labels ...string)
 }
 
 type MetricsDecorator[T any] struct {
 	next      cache[T]
-	collector MetricsCollector
+	collector metricsCollector
 }
 
-func NewMetricsDecorator[T any](next cache[T], collector MetricsCollector) *MetricsDecorator[T] {
+func NewMetricsDecorator[T any](next cache[T], collector metricsCollector) *MetricsDecorator[T] {
 	return &MetricsDecorator[T]{next: next, collector: collector}
 }
 

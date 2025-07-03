@@ -225,8 +225,8 @@ func (a *App) init() ServiceContainer {
 
 	prom := metrics.NewPromCollector()
 
-	cahceRedisClient := cache.NewRedisClient[models.WeatherData](redisClient, a.log)
-	cacheWithMetrics := cache.NewMetricsDecorator[models.WeatherData](cahceRedisClient, prom)
+	cacheRedisClient := cache.NewRedisClient[models.WeatherData](redisClient, a.log)
+	cacheWithMetrics := cache.NewMetricsDecorator[models.WeatherData](cacheRedisClient, prom)
 
 	cacheDecorator := decorators.NewCachedService(weatherService, cacheWithMetrics, a.log, liveTime)
 
