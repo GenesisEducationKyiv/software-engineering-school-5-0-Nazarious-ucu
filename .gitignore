@@ -1,0 +1,6 @@
+.DS_Store
+.idea
+*.sqlite
+*.db
+/.env
+**/weather.Db
