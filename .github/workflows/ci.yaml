@@ -16,6 +16,9 @@ jobs:
         uses: ./.github/actions/setup
         with:
           go-version-file: 'go.mod'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
       - name: Run Linter
         run: task lint

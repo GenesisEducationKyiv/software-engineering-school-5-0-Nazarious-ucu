@@ -8,40 +8,46 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/subscriptions"
-	service "github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather"
-
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
-	"github.com/pressly/goose/v3"
-
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/emailer"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
 	"github.com/gin-gonic/gin"
+	"github.com/pressly/goose/v3"
 	swaggerfiles "github.com/swaggo/files"
 	swagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/zap"
+
+	_ "github.com/Nazarious-ucu/weather-subscription-api/docs"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/emailer"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/logger"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/subscriptions"
+	serviceWeather "github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather"
+	fLogger "github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 )
 
-const timeoutDuration = 5 * time.Second
-
-type App struct {
-	cfg config.Config
-	log *log.Logger
-}
+const (
+	timeoutDuration = 5 * time.Second
+)
 
 type ServiceContainer struct {
-	WeatherService      *service.Service
+	WeatherService      *serviceWeather.ServiceProvider
 	SubscriptionService *subscriptions.Service
 	EmailService        *email.Service
 	Notificator         *notifier.Notifier
 	SubRepository       repository.SubscriptionRepository
 
-	Router *gin.Engine
-	Srv    *http.Server
-	Db     *sql.DB
+	Router     *gin.Engine
+	Srv        *http.Server
+	Db         *sql.DB
+	fileLogger *zap.Logger
+}
+
+type App struct {
+	cfg config.Config
+	log *log.Logger
 }
 
 func New(cfg config.Config, logger *log.Logger) *App {
@@ -51,55 +57,8 @@ func New(cfg config.Config, logger *log.Logger) *App {
 	}
 }
 
-func (a *App) Init() ServiceContainer {
-	a.log.Println("Initializing application with configuration:", a.cfg)
-
-	db, err := CreateSqliteDb(a.cfg.DB.Dialect, a.cfg.DB.Source)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	if err := InitSqliteDb(db, a.cfg.DB.Dialect, a.cfg.DB.MigrationsPath); err != nil {
-		log.Panic(err)
-	}
-
-	router := gin.Default()
-
-	apiServer := &http.Server{
-		Addr:        a.cfg.Server.Address,
-		Handler:     router,
-		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout) * time.Second,
-	}
-
-	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
-	a.log.Printf("Initializing SMTP service with config: %+v\n", a.cfg.Email)
-	subRepository := repository.NewSubscriptionRepository(db, a.log)
-	emailService := email.NewService(smtpService, a.cfg.TemplatesDir)
-	weatherService := service.NewService(a.cfg.WeatherAPIKey, &http.Client{}, a.log, a.cfg.WeatherAPIURL)
-	notificator := notifier.New(subRepository,
-		weatherService,
-		emailService,
-		a.log,
-		a.cfg.NotifierFreq.HourlyFrequency,
-		a.cfg.NotifierFreq.DailyFrequency,
-	)
-
-	srvContainer := ServiceContainer{
-		WeatherService:      weatherService,
-		SubscriptionService: subscriptions.NewService(subRepository, emailService),
-		EmailService:        emailService,
-		SubRepository:       *subRepository,
-		Notificator:         notificator,
-
-		Router: router,
-		Srv:    apiServer,
-		Db:     db,
-	}
-
-	return srvContainer
-}
-
-func (a *App) Start(srvContainer ServiceContainer) error {
+func (a *App) Start(ctx context.Context) error {
+	srvContainer := a.init()
 	a.log.Println("Starting server on", a.cfg.Server.Address)
 
 	defer func() {
@@ -120,24 +79,38 @@ func (a *App) Start(srvContainer ServiceContainer) error {
 	}
 	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
 
-	srvContainer.Notificator.Start(context.Background())
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	srvContainer.Notificator.Start(ctxWithTimeout)
 
 	if err := srvContainer.Srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 
-	log.Println("Application started successfully on", a.cfg.Server.Address)
+	<-ctx.Done()
+
+	a.log.Println("Application started successfully on", a.cfg.Server.Address)
 	defer func() {
 		if err := a.Stop(srvContainer); err != nil {
-			log.Panicf("failed to shutdown application: %v", err)
+			a.log.Panicf("failed to shutdown application: %v", err)
 		}
-		log.Println("Application shutdown successfully")
+		a.log.Println("Application shutdown successfully")
 	}()
 	return nil
 }
 
 func (a *App) Stop(srvContainer ServiceContainer) error {
 	a.log.Println("Stopping application…")
+
+	defer func(fileLogger *zap.Logger) {
+		err := fileLogger.Sync()
+		if err != nil {
+			a.log.Printf("failed to sync file logger: %v", err)
+		} else {
+			a.log.Println("File logger synced successfully")
+		}
+	}(srvContainer.fileLogger)
 
 	srvContainer.Notificator.Stop()
 	a.log.Println("Notifier stopped")
@@ -161,7 +134,107 @@ func (a *App) Stop(srvContainer ServiceContainer) error {
 	return nil
 }
 
-func CreateSqliteDb(dialect, name string) (*sql.DB, error) {
+func (a *App) init() ServiceContainer {
+	a.log.Println("Initializing application with configuration:", a.cfg)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	defer cancel()
+
+	db, err := CreateSqliteDb(ctx, a.cfg.DB.Dialect, a.cfg.DB.Source)
+	if err != nil {
+		a.log.Panic(err)
+	}
+
+	if err := InitSqliteDb(db, a.cfg.DB.Dialect, a.cfg.DB.MigrationsPath); err != nil {
+		a.log.Panic(err)
+	}
+
+	router := gin.Default()
+
+	apiServer := &http.Server{
+		Addr:        a.cfg.Server.Address,
+		Handler:     router,
+		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout) * time.Second,
+	}
+
+	a.log.Printf("Application initialized on address: %s", apiServer.Addr)
+
+	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
+	a.log.Printf("Initializing SMTP service with config: %+v\n", a.cfg.Email)
+	subRepository := repository.NewSubscriptionRepository(db, a.log)
+	emailService := email.NewService(smtpService, a.cfg.TemplatesDir)
+
+	fileLogger, err := fLogger.NewFileLogger(a.cfg.LogsPath)
+	if err != nil {
+		a.log.Panicf("failed to create file logger: %v", err)
+	}
+
+	loggerT := logger.NewRoundTripper(fileLogger)
+
+	httpLogClient := &http.Client{
+		Transport: loggerT,
+	}
+
+	breakerCfg := serviceWeather.BreakerConfig{
+		TimeInterval: time.Duration(a.cfg.Breaker.TimeInterval) * time.Second,
+		TimeTimeOut:  time.Duration(a.cfg.Breaker.TimeTimeOut) * time.Second,
+		RepeatNumber: a.cfg.Breaker.RepeatNumber,
+	}
+	openWeatherMapClient := serviceWeather.NewBreakerClient("OpenWeather", breakerCfg,
+		serviceWeather.NewClientOpenWeatherMap(
+			a.cfg.OpenWeatherMapAPIKey,
+			a.cfg.OpenWeatherMapURL,
+			httpLogClient,
+			a.log,
+		),
+	)
+
+	weatherAPIClient := serviceWeather.NewBreakerClient("WeatherAPI", breakerCfg,
+		serviceWeather.NewClientWeatherAPI(
+			a.cfg.WeatherAPIKey,
+			a.cfg.WeatherAPIURL,
+			httpLogClient,
+			a.log,
+		),
+	)
+
+	weatherBitClient := serviceWeather.NewBreakerClient("WeatherBit", breakerCfg,
+		serviceWeather.NewClientWeatherBit(
+			a.cfg.WeatherBitAPIKey,
+			a.cfg.WeatherBitURL,
+			httpLogClient,
+			a.log,
+		),
+	)
+
+	weatherService := serviceWeather.NewService(a.log,
+		weatherAPIClient,
+		openWeatherMapClient,
+		weatherBitClient)
+	notificator := notifier.New(subRepository,
+		weatherService,
+		emailService,
+		a.log,
+		a.cfg.NotifierFreq.HourlyFrequency,
+		a.cfg.NotifierFreq.DailyFrequency,
+	)
+
+	srvContainer := ServiceContainer{
+		WeatherService:      weatherService,
+		SubscriptionService: subscriptions.NewService(subRepository, emailService),
+		EmailService:        emailService,
+		SubRepository:       *subRepository,
+		Notificator:         notificator,
+
+		Router: router,
+		Srv:    apiServer,
+		Db:     db,
+	}
+
+	return srvContainer
+}
+
+func CreateSqliteDb(ctx context.Context, dialect, name string) (*sql.DB, error) {
 	if name == "" {
 		return nil, errors.New("database name cannot be empty")
 	}
@@ -171,7 +244,7 @@ func CreateSqliteDb(dialect, name string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		return nil, err
 	}
 

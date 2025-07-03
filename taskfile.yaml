@@ -43,6 +43,12 @@ tasks:
     status:
       - command -v goose
 
+  install:swaggo:
+    desc: "Install swaggo for swagger generation"
+    cmds:
+      - go install github.com/swaggo/swag/cmd/swag@latest
+    status:
+      - command -v swag
 
   migrations-up:
     desc: "Start migrations for db"
@@ -65,15 +71,24 @@ tasks:
     cmds:
       - goose -dir migrations sqlite3 subscriptions.db status
 
+  swag-gen:
+    desc: "Generate swagger files"
+    deps:
+      - install:goose
+    dir: ./main
+    cmds:
+      - swag init --parseDependency --parseInternal --output ../docs -g ./main.go
+
+
   test:unit:
     desc: "Run unit tests"
     cmds:
-      - go test -v ./...
+      - go test -v -tags=unit ./...
 
   test:integration:
     desc: "Run integration tests (requires docker-compose.test.yml)"
     dotenv:
-      - .env
+      - .env.example
     cmds:
       - docker compose -f docker-compose.test.yml up -d
       - sleep 2

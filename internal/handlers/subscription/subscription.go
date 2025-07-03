@@ -1,12 +1,16 @@
 package subscription
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+const timeoutDuration = 10 * time.Second
 
 var ErrSubscriptionExists = errors.New("subscription already exists")
 
@@ -17,9 +21,9 @@ type UserSubData struct {
 }
 
 type subscriber interface {
-	Subscribe(data UserSubData) error
-	Confirm(token string) (bool, error)
-	Unsubscribe(token string) (bool, error)
+	Subscribe(ctx context.Context, data UserSubData) error
+	Confirm(ctx context.Context, token string) (bool, error)
+	Unsubscribe(ctx context.Context, token string) (bool, error)
 }
 
 type Handler struct {
@@ -51,7 +55,10 @@ func (h *Handler) Subscribe(c *gin.Context) {
 		return
 	}
 
-	err := h.Service.Subscribe(userData)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), timeoutDuration)
+	defer cancel()
+
+	err := h.Service.Subscribe(ctx, userData)
 	if err != nil {
 		if errors.Is(err, ErrSubscriptionExists) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Email and city already subscribed"})
@@ -77,7 +84,11 @@ func (h *Handler) Subscribe(c *gin.Context) {
 func (h *Handler) Confirm(c *gin.Context) {
 	log.Printf("token: %s", c.Param("token"))
 	token := c.Param("token")
-	ok, err := h.Service.Confirm(token)
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), timeoutDuration)
+	defer cancel()
+
+	ok, err := h.Service.Confirm(ctx, token)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -100,7 +111,11 @@ func (h *Handler) Confirm(c *gin.Context) {
 // @Router /unsubscribe/{token} [get]
 func (h *Handler) Unsubscribe(c *gin.Context) {
 	token := c.Param("token")
-	ok, err := h.Service.Unsubscribe(token)
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), timeoutDuration)
+	defer cancel()
+
+	ok, err := h.Service.Unsubscribe(ctx, token)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return

@@ -21,15 +21,15 @@ func TestWeatherFlow(t *testing.T) {
 	}{
 		{
 			name:     "valid city",
-			city:     "Kyiv",
+			city:     "H_E_L_L",
 			wantCode: http.StatusOK,
 			wantBody: `{"temperature":10000.0,"condition":"Sunny","city":"H_E_L_L"}`,
 		},
 		{
 			name:     "invalid city",
 			city:     "InvalidCity",
-			wantCode: http.StatusNotFound,
-			wantBody: `{"error":"City not found"}`,
+			wantCode: http.StatusInternalServerError,
+			wantBody: `{"error":"all weather API clients failed to fetch data"}`,
 		},
 	}
 

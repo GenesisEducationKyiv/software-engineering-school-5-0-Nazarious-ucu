@@ -2,3 +2,5 @@
 .idea
 *.sqlite
 *.db
+/.env
+**/weather.Db

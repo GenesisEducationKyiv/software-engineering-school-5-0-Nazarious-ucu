@@ -42,11 +42,10 @@ func (h *Handler) GetWeather(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "city query parameter is required"})
 		return
 	}
-
-	timeOutContext, cancel := context.WithTimeout(c.Request.Context(), timeoutDuration)
+	ctxWithTimeout, cancel := context.WithTimeout(c.Request.Context(), timeoutDuration)
 	defer cancel()
 
-	data, err := h.service.GetByCity(timeOutContext, city)
+	data, err := h.service.GetByCity(ctxWithTimeout, city)
 	if err != nil {
 		if strings.Contains(err.Error(), "status 404") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "City not found"})

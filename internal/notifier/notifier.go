@@ -18,8 +18,8 @@ const (
 )
 
 type subscriptionRepository interface {
-	GetConfirmedByFrequency(frequency string, ctx context.Context) ([]models.Subscription, error)
-	UpdateLastSent(subscriptionID int) error
+	GetConfirmedByFrequency(ctx context.Context, frequency string) ([]models.Subscription, error)
+	UpdateLastSent(ctx context.Context, subscriptionID int) error
 }
 
 type emailSender interface {
@@ -89,7 +89,7 @@ func (n *Notifier) RunDue(ctx context.Context, frequency string) {
 	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 
-	subs, err := n.repo.GetConfirmedByFrequency(frequency, ctx)
+	subs, err := n.repo.GetConfirmedByFrequency(ctx, frequency)
 	if err != nil {
 		n.logger.Println("Error fetching due subs:", err)
 		return
@@ -120,5 +120,5 @@ func (n *Notifier) SendOne(ctx context.Context, sub models.Subscription) error {
 		return err
 	}
 
-	return n.repo.UpdateLastSent(sub.ID)
+	return n.repo.UpdateLastSent(ctx, sub.ID)
 }

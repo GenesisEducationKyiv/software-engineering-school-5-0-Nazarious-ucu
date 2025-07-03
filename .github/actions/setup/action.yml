@@ -13,6 +13,11 @@ inputs:
     default: "false"
     required: false
 
+  install-swaggo:
+    description: "Option to install swaggo or not"
+    default: "false"
+    required: false
+
 runs:
   using: "composite"
   steps:
@@ -21,10 +26,18 @@ runs:
       with:
         go-version-file: ${{ inputs.go-version-file }}
 
+
     - name: Install Task
       uses: arduino/setup-task@v2
+      env:
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
 
     - name: Install Goose
       shell: sh
       if: ${{ inputs.install-goose  == 'true' }}
       run: go install github.com/pressly/goose/v3/cmd/goose@latest
+
+    - name: Install Swaggo
+      shell: sh
+      if: ${{ inputs.install-swaggo  == 'true' }}
+      run: go install github.com/swaggo/swag/cmd/swag@latest

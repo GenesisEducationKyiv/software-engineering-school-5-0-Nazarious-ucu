@@ -5,7 +5,7 @@ import (
 )
 
 type Server struct {
-	Address     string `envconfig:"SERVER_ADDRESS" default:":8080"`
+	Address     string `envconfig:"SERVER_ADDRESS" default:":8000"`
 	ReadTimeout int    `envconfig:"SERVER_TIMEOUT" default:"10"`
 }
 
@@ -28,15 +28,30 @@ type NotifierFrequency struct {
 	HourlyFrequency string `envconfig:"NOTIFIER_HOURLY_FREQUENCY" default:"0 * * * *"`
 }
 
+type Breaker struct {
+	TimeInterval int    `envconfig:"BREAKER_INTERVAL" default:"30"`
+	TimeTimeOut  int    `envconfig:"BREAKER_TIMEOUT" default:"10"`
+	RepeatNumber uint32 `envconfig:"BREAKER_REPEAT_NUM" default:"5"`
+}
+
 type Config struct {
 	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
 	WeatherAPIURL string `envconfig:"WEATHER_API_URL" required:"true"`
-	Server        Server
-	Email         Email
-	DB            Db
-	NotifierFreq  NotifierFrequency
+
+	OpenWeatherMapAPIKey string `envconfig:"OPEN_WEATHER_MAP_API_KEY" required:"true"`
+	OpenWeatherMapURL    string `envconfig:"OPEN_WEATHER_MAP_URL" required:"true"`
+
+	WeatherBitAPIKey string `envconfig:"WEATHER_BIT_API_KEY" required:"true"`
+	WeatherBitURL    string `envconfig:"WEATHER_BIT_URL" required:"true"`
+
+	Server       Server
+	Email        Email
+	DB           Db
+	NotifierFreq NotifierFrequency
+	Breaker      Breaker
 
 	TemplatesDir string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
+	LogsPath     string `envconfig:"LOGS_PATH" default:"./log/weather-subscription-api.log"`
 }
 
 func NewConfig() (*Config, error) {
