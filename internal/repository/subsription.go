@@ -70,7 +70,7 @@ func (r *SubscriptionRepository) Unsubscribe(ctx context.Context, token string) 
 	return count > 0, err
 }
 
-func (r *SubscriptionRepository) UpdateLastSent(subscriptionID int, ctx context.Context) error {
+func (r *SubscriptionRepository) UpdateLastSent(ctx context.Context, subscriptionID int) error {
 	_, err := r.DB.ExecContext(ctx,
 		"UPDATE subscriptions SET last_sent = ? WHERE id = ?",
 		time.Now(), subscriptionID,
@@ -78,8 +78,7 @@ func (r *SubscriptionRepository) UpdateLastSent(subscriptionID int, ctx context.
 	return err
 }
 
-func (r *SubscriptionRepository) GetConfirmedByFrequency(frequency string,
-	ctx context.Context,
+func (r *SubscriptionRepository) GetConfirmedByFrequency(ctx context.Context, frequency string,
 ) ([]models.Subscription, error) {
 	rows, err := r.DB.QueryContext(ctx, `
 		SELECT id, email, city, frequency, last_sent

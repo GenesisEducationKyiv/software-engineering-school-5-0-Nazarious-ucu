@@ -28,6 +28,12 @@ type NotifierFrequency struct {
 	HourlyFrequency string `envconfig:"NOTIFIER_HOURLY_FREQUENCY" default:"0 * * * *"`
 }
 
+type Breaker struct {
+	TimeInterval int    `envconfig:"BREAKER_INTERVAL" default:"30"`
+	TimeTimeOut  int    `envconfig:"BREAKER_TIMEOUT" default:"10"`
+	RepeatNumber uint32 `envconfig:"BREAKER_REPEAT_NUM" default:"5"`
+}
+
 type Redis struct {
 	Host     string `envconfig:"REDIS_HOST" default:"localhost"`
 	Port     string `envconfig:"REDIS_PORT" default:"6379"`
@@ -48,6 +54,7 @@ type Config struct {
 	Email        Email
 	DB           Db
 	NotifierFreq NotifierFrequency
+	Breaker      Breaker
 	Redis        Redis
 
 	TemplatesDir string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`

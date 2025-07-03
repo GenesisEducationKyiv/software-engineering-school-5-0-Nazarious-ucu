@@ -47,7 +47,7 @@ func (s *ClientWeatherBit) Fetch(ctx context.Context, city string) (models.Weath
 	defer func(body io.ReadCloser) {
 		err := body.Close()
 		if err != nil {
-			s.logger.Println("failed to close response body: %w", err)
+			s.logger.Printf("failed to close response body: %v", err)
 		}
 	}(resp.Body)
 

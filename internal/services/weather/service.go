@@ -9,8 +9,6 @@ import (
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 )
 
-var errorResponse = errors.New("all weather API clients failed to fetch data")
-
 type client interface {
 	Fetch(ctx context.Context, city string) (models.WeatherData, error)
 }
@@ -37,5 +35,5 @@ func (s *ServiceProvider) GetByCity(ctx context.Context, city string) (models.We
 		}
 		return data, nil
 	}
-	return models.WeatherData{}, errorResponse
+	return models.WeatherData{}, errors.New("all weather API clients failed to fetch data")
 }

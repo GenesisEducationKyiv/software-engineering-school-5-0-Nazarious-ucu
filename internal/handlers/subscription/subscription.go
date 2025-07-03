@@ -55,7 +55,7 @@ func (h *Handler) Subscribe(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), timeoutDuration)
 	defer cancel()
 
 	err := h.Service.Subscribe(ctx, userData)
@@ -85,7 +85,7 @@ func (h *Handler) Confirm(c *gin.Context) {
 	log.Printf("token: %s", c.Param("token"))
 	token := c.Param("token")
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), timeoutDuration)
 	defer cancel()
 
 	ok, err := h.Service.Confirm(ctx, token)
@@ -112,7 +112,7 @@ func (h *Handler) Confirm(c *gin.Context) {
 func (h *Handler) Unsubscribe(c *gin.Context) {
 	token := c.Param("token")
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), timeoutDuration)
 	defer cancel()
 
 	ok, err := h.Service.Unsubscribe(ctx, token)

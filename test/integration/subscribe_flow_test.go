@@ -72,7 +72,7 @@ func TestPostSubscribe(t *testing.T) {
 			}(resp.Body)
 
 			// Check the status code
-			assert.Equalf(t, resp.StatusCode, tc.wantCode,
+			assert.Equalf(t, tc.wantCode, resp.StatusCode,
 				"Expected status code %d, got %d", tc.wantCode, resp.StatusCode)
 
 			// Check the response body

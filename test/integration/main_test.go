@@ -10,15 +10,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
 	"github.com/stretchr/testify/assert"
-	swaggerfiles "github.com/swaggo/files"
-	swagger "github.com/swaggo/gin-swagger"
 )
 
 var (
@@ -47,63 +43,59 @@ func TestMain(m *testing.M) {
 
 	cfg.Email.Host = "localhost"
 	cfg.Email.Port = "1025"
+
 	cfg.DB.Source = "test.db"
-	cfg.WeatherAPIURL = testWeatherAPIServer.URL
-	cfg.WeatherAPIKey = "secret-key"
-	cfg.OpenWeatherMapAPIKey = "secret-key"
-	cfg.OpenWeatherMapURL = testOpenWeatherAPIServer.URL
-	cfg.WeatherBitAPIKey = "secret-key"
-	cfg.WeatherBitURL = testWeatherBitAPIServer.URL
 	cfg.DB.MigrationsPath = "../../migrations"
 
+	cfg.WeatherAPIURL = testWeatherAPIServer.URL
+	cfg.WeatherAPIKey = "secret-key-weatherapi"
+
+	cfg.OpenWeatherMapAPIKey = "secret-key-open-weather"
+	cfg.OpenWeatherMapURL = testOpenWeatherAPIServer.URL
+
+	cfg.WeatherBitAPIKey = "secret-key-weatherbit"
+	cfg.WeatherBitURL = testWeatherBitAPIServer.URL
+
+	cfg.Server.Address = "127.0.0.1:8081"
+
 	application := app.New(*cfg, log.Default())
-	srvContainer := application.Init()
+	ctx := context.Background()
+
+	database, err := app.CreateSqliteDb(ctx, cfg.DB.Dialect, cfg.DB.Source)
+	if err != nil {
+		log.Panicf("failed to create database: %v", err)
+	}
+
+	err = app.InitSqliteDb(database, cfg.DB.Dialect, cfg.DB.MigrationsPath)
+	if err != nil {
+		log.Panicf("failed to init database: %v", err)
+	}
 
 	// Check if the database is initialized using testify assert
-	if srvContainer.Db == nil {
+	if database == nil {
 		log.Panic("Database is not initialized")
 	}
 
 	// Check if is there new table in the database
-	if err := srvContainer.Db.Ping(); err != nil {
+	if err := database.Ping(); err != nil {
 		log.Panicf("failed to connect to the database: %v", err)
 	}
 
-	defer func() {
-		if err := srvContainer.Srv.Close(); err != nil {
-			log.Println("Error stopping testWeatherAPIServer:", err)
+	ctxWithCancel, cancel := context.WithCancel(ctx)
+
+	go func() {
+		if err := application.Start(ctxWithCancel); err != nil {
+			log.Panic(err)
 		}
 	}()
 
-	subHandler := subscription.NewHandler(srvContainer.SubscriptionService)
-	weatherHandler := weather.NewHandler(srvContainer.WeatherService)
-
-	notificator := notifier.New(&srvContainer.SubRepository,
-		srvContainer.WeatherService,
-		srvContainer.EmailService,
-		&log.Logger{},
-		cfg.NotifierFreq.HourlyFrequency,
-		cfg.NotifierFreq.DailyFrequency,
-	)
-
-	api := srvContainer.Router.Group("/api")
-	{
-		api.GET("/weather", weatherHandler.GetWeather)
-		api.POST("/subscribe", subHandler.Subscribe)
-		api.GET("/confirm/:token", subHandler.Confirm)
-		api.GET("/unsubscribe/:token", subHandler.Unsubscribe)
-	}
-	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
-
-	notificator.Start(context.Background())
-
-	// Create a test testWeatherAPIServer
-	testServer := httptest.NewServer(srvContainer.Router)
-
-	initIntegration(testServer.URL, srvContainer.Db)
+	initIntegration("http://"+cfg.Server.Address, database)
+	time.Sleep(100 * time.Millisecond)
 
 	// Run the tests
 	_ = m.Run()
+
+	cancel()
 	// os.Exit(code)
 }
 
@@ -131,7 +123,7 @@ func NewTestWeatherAPIServer() *httptest.Server {
 			return
 		}
 		// correct key - return data
-		if key == "secret-key" {
+		if key == "secret-key-weatherapi" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(fakeWeatherData))
@@ -213,7 +205,7 @@ func newTestOpenWeatherAPIServer() *httptest.Server {
 			return
 		}
 		// correct key - return data
-		if key == "secret-key" {
+		if key == "secret-key-open-weather" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(mockWeatherResponse))
@@ -251,7 +243,7 @@ func newWeatherBitTestServer() *httptest.Server {
 			return
 		}
 		// correct key - return data
-		if key == "secret-key" {
+		if key == "secret-key-weatherbit" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(mockBitWeatherResponse))
