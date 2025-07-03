@@ -10,16 +10,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pressly/goose/v3"
+	"github.com/redis/go-redis/v9"
 	swaggerfiles "github.com/swaggo/files"
 	swagger "github.com/swaggo/gin-swagger"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	_ "github.com/Nazarious-ucu/weather-subscription-api/docs"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/cache"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/config"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/emailer"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
@@ -32,8 +34,6 @@ import (
 
 const (
 	timeoutDuration = 5 * time.Second
-
-	fileMode = 0o644
 
 	liveTime = 24 * time.Hour
 )
