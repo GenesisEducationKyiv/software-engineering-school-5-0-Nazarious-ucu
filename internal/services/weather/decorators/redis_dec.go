@@ -51,7 +51,7 @@ func (s *CachedService) GetByCity(ctx context.Context, city string) (models.Weat
 
 	err = s.cache.Set(ctx, key, weather, s.liveTime)
 	if err != nil {
-		s.logger.Printf("Cache error for city %s", city)
+		s.logger.Printf("Cache error %s for city %s", err, city)
 	}
 
 	return weather, nil

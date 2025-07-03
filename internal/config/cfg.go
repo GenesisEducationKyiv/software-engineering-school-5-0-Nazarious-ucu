@@ -5,7 +5,7 @@ import (
 )
 
 type Server struct {
-	Address     string `envconfig:"SERVER_ADDRESS" default:":8000"`
+	Address     string `envconfig:"SERVER_ADDRESS" default:":8080"`
 	ReadTimeout int    `envconfig:"SERVER_TIMEOUT" default:"10"`
 }
 
@@ -35,9 +35,9 @@ type Breaker struct {
 }
 
 type Redis struct {
-	Host     string `envconfig:"REDIS_HOST" default:"localhost"`
-	Port     string `envconfig:"REDIS_PORT" default:"6379"`
-	Password string `envconfig:"REDIS_PASSWORD" required:"true"`
+	Host   string `envconfig:"REDIS_HOST" default:"localhost"`
+	Port   string `envconfig:"REDIS_PORT" default:"6379"`
+	DbType int    `envconfig:"REDIS_DB_TYPE" required:"true"`
 }
 
 type Config struct {
