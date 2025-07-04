@@ -231,7 +231,7 @@ func (a *App) init() ServiceContainer {
 	cacheDecorator := decorators.NewCachedService(weatherService, cacheWithMetrics, a.log, liveTime)
 
 	notificator := notifier.New(subRepository,
-		weatherService,
+		cacheDecorator,
 		emailService,
 		a.log,
 		a.cfg.NotifierFreq.HourlyFrequency,
