@@ -35,9 +35,10 @@ type Breaker struct {
 }
 
 type Redis struct {
-	Host   string `envconfig:"REDIS_HOST" default:"localhost"`
-	Port   string `envconfig:"REDIS_PORT" default:"6379"`
-	DbType int    `envconfig:"REDIS_DB_TYPE" required:"true"`
+	Host     string `envconfig:"REDIS_HOST" default:"localhost"`
+	Port     string `envconfig:"REDIS_PORT" default:"6379"`
+	DbType   int    `envconfig:"REDIS_DB_TYPE" required:"true"`
+	LiveTime int    `envconfig:"REDIS_LIVE_TIME" default:"1"`
 }
 
 type Config struct {

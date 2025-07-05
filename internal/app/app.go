@@ -37,8 +37,6 @@ import (
 
 const (
 	timeoutDuration = 5 * time.Second
-
-	liveTime = 24 * time.Hour
 )
 
 type ServiceContainer struct {
@@ -225,10 +223,14 @@ func (a *App) init() ServiceContainer {
 
 	prom := metrics.NewPromCollector()
 
-	cacheRedisClient := cache.NewRedisClient[models.WeatherData](redisClient, a.log)
+	cacheRedisClient := cache.NewRedisClient[models.WeatherData](
+		redisClient,
+		a.log,
+		time.Duration(a.cfg.Redis.LiveTime)*time.Hour,
+	)
 	cacheWithMetrics := cache.NewMetricsDecorator[models.WeatherData](cacheRedisClient, prom)
 
-	cacheDecorator := decorators.NewCachedService(weatherService, cacheWithMetrics, a.log, liveTime)
+	cacheDecorator := decorators.NewCachedService(weatherService, cacheWithMetrics, a.log)
 
 	notificator := notifier.New(subRepository,
 		cacheDecorator,

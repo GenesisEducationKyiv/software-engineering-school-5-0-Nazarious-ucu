@@ -6,8 +6,8 @@ import (
 )
 
 type cache[T any] interface {
-	Set(ctx context.Context, key string, value T, expiration time.Duration) error
-	Get(ctx context.Context, key string, returnValue *T) error
+	Set(ctx context.Context, key string, value T) error
+	Get(ctx context.Context, key string) (T, error)
 }
 
 type metricsCollector interface {
@@ -28,10 +28,9 @@ func (m *MetricsDecorator[T]) Set(
 	ctx context.Context,
 	key string,
 	value T,
-	expiration time.Duration,
 ) error {
 	start := time.Now()
-	err := m.next.Set(ctx, key, value, expiration)
+	err := m.next.Set(ctx, key, value)
 	dur := time.Since(start)
 	m.collector.ObserveLatency("cache_set", dur)
 	if err != nil {
@@ -42,13 +41,13 @@ func (m *MetricsDecorator[T]) Set(
 	return err
 }
 
+//nolint:ireturn
 func (m *MetricsDecorator[T]) Get(
 	ctx context.Context,
 	key string,
-	returnValue *T,
-) error {
+) (T, error) {
 	start := time.Now()
-	err := m.next.Get(ctx, key, returnValue)
+	data, err := m.next.Get(ctx, key)
 	dur := time.Since(start)
 	m.collector.ObserveLatency("cache_get", dur)
 	if err != nil {
@@ -56,5 +55,5 @@ func (m *MetricsDecorator[T]) Get(
 	} else {
 		m.collector.IncrementCounter("cache_get_hits", key)
 	}
-	return err
+	return data, err
 }
