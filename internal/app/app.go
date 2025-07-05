@@ -10,6 +10,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pressly/goose/v3"
+	"github.com/redis/go-redis/v9"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/logger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerfiles "github.com/swaggo/files"
 	swagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
@@ -19,12 +23,15 @@ import (
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/emailer"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/cache"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/logger"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/metrics"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/subscriptions"
 	serviceWeather "github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather/decorators"
 	fLogger "github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 )
 
@@ -33,7 +40,7 @@ const (
 )
 
 type ServiceContainer struct {
-	WeatherService      *serviceWeather.ServiceProvider
+	WeatherService      *decorators.CachedService
 	SubscriptionService *subscriptions.Service
 	EmailService        *email.Service
 	Notificator         *notifier.Notifier
@@ -78,6 +85,7 @@ func (a *App) Start(ctx context.Context) error {
 		api.GET("/unsubscribe/:token", subHandler.Unsubscribe)
 	}
 	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
+	srvContainer.Router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
@@ -149,6 +157,7 @@ func (a *App) init() ServiceContainer {
 		a.log.Panic(err)
 	}
 
+	redisClient := newRedisConnection(a.cfg.Redis.Host+":"+a.cfg.Redis.Port, a.cfg.Redis.DbType)
 	router := gin.Default()
 
 	apiServer := &http.Server{
@@ -211,8 +220,20 @@ func (a *App) init() ServiceContainer {
 		weatherAPIClient,
 		openWeatherMapClient,
 		weatherBitClient)
+
+	prom := metrics.NewPromCollector()
+
+	cacheRedisClient := cache.NewRedisClient[models.WeatherData](
+		redisClient,
+		a.log,
+		time.Duration(a.cfg.Redis.LiveTime)*time.Hour,
+	)
+	cacheWithMetrics := cache.NewMetricsDecorator[models.WeatherData](cacheRedisClient, prom)
+
+	cacheDecorator := decorators.NewCachedService(weatherService, cacheWithMetrics, a.log)
+
 	notificator := notifier.New(subRepository,
-		weatherService,
+		cacheDecorator,
 		emailService,
 		a.log,
 		a.cfg.NotifierFreq.HourlyFrequency,
@@ -220,7 +241,7 @@ func (a *App) init() ServiceContainer {
 	)
 
 	srvContainer := ServiceContainer{
-		WeatherService:      weatherService,
+		WeatherService:      cacheDecorator,
 		SubscriptionService: subscriptions.NewService(subRepository, emailService),
 		EmailService:        emailService,
 		SubRepository:       *subRepository,
@@ -262,4 +283,11 @@ func InitSqliteDb(db *sql.DB, dialect, migrationPath string) error {
 	}
 
 	return nil
+}
+
+func newRedisConnection(connString string, dbType int) *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr: connString,
+		DB:   dbType,
+	})
 }

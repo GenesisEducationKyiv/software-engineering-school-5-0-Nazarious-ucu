@@ -7,6 +7,25 @@ services:
       - "8025:8025"
     networks:
         - test_network
+  redis:
+    image: redis:7-alpine
+    container_name: myapp-redis
+    restart: unless-stopped
+    ports:
+      - "6378:6379"
+    volumes:
+      - redis-data:/data
+    command: [ "redis-server", "--appendonly", "yes" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+
+volumes:
+  redis-data:
 
 networks:
   test_network:
