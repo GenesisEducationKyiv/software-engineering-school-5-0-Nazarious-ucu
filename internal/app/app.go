@@ -25,7 +25,6 @@ import (
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository/cache"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository/sqlite"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
