@@ -16,7 +16,7 @@ import (
 // @host localhost:8080
 // @BasePath /api/
 func main() {
-	if err := godotenv.Load(".env.example"); err != nil {
+	if err := godotenv.Load(".env"); err != nil {
 		log.Printf("No .env file found: %v", err)
 	}
 
