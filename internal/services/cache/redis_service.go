@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -39,13 +40,18 @@ func (c *RedisClient[T]) Set(
 //nolint:ireturn
 func (c *RedisClient[T]) Get(ctx context.Context, key string) (T, error) {
 	data, err := c.client.Get(ctx, key).Bytes()
+
+	var zero T
 	if err != nil {
-		var zero T
 		return zero, err
 	}
 
 	result := new(T)
-	err = json.Unmarshal(data, result)
 
-	return *result, err
+	var v T
+
+	if err := json.Unmarshal(data, result); err != nil {
+		return zero, fmt.Errorf("unmarshal: %w", err)
+	}
+	return v, nil
 }
