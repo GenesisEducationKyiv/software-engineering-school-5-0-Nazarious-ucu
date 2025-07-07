@@ -4,3 +4,5 @@
 *.db
 /.env
 **/weather.Db
+.gitsecret/keys/random_seed
+!*.secret

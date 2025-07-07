@@ -5,7 +5,7 @@ import (
 )
 
 type Server struct {
-	Address     string `envconfig:"SERVER_ADDRESS" default:":8000"`
+	Address     string `envconfig:"SERVER_ADDRESS" default:":8080"`
 	ReadTimeout int    `envconfig:"SERVER_TIMEOUT" default:"10"`
 }
 
@@ -34,6 +34,13 @@ type Breaker struct {
 	RepeatNumber uint32 `envconfig:"BREAKER_REPEAT_NUM" default:"5"`
 }
 
+type Redis struct {
+	Host     string `envconfig:"REDIS_HOST" default:"localhost"`
+	Port     string `envconfig:"REDIS_PORT" default:"6379"`
+	DbType   int    `envconfig:"REDIS_DB_TYPE" required:"true"`
+	LiveTime int    `envconfig:"REDIS_LIVE_TIME" default:"1"`
+}
+
 type Config struct {
 	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
 	WeatherAPIURL string `envconfig:"WEATHER_API_URL" required:"true"`
@@ -49,6 +56,7 @@ type Config struct {
 	DB           Db
 	NotifierFreq NotifierFrequency
 	Breaker      Breaker
+	Redis        Redis
 
 	TemplatesDir string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
 	LogsPath     string `envconfig:"LOGS_PATH" default:"./log/weather-subscription-api.log"`
