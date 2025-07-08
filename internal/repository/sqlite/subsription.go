@@ -1,4 +1,4 @@
-package repository
+package sqlite
 
 import (
 	"context"
@@ -24,7 +24,7 @@ func NewSubscriptionRepository(db *sql.DB, logger *log.Logger) *SubscriptionRepo
 
 func (r *SubscriptionRepository) Create(
 	ctx context.Context,
-	data subscription.UserSubData,
+	data models.UserSubData,
 	token string,
 ) error {
 	var cnt int
