@@ -1,0 +1,140 @@
+swagger: "2.0"
+info:
+  title: v1.alpha/subs/subscription.proto
+  version: version not set
+tags:
+  - name: Subscription
+    description: Handles email subscriptions to weather updates by city with optional frequency.
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /api/v1/confirm/{token}:
+    get:
+      summary: Confirm subscription
+      description: Confirms the subscription using the token sent in the email.
+      operationId: SubscriptionService_Confirm
+      responses:
+        "200":
+          description: Subscription confirmed successfully
+          schema:
+            type: object
+            properties: {}
+        "400":
+          description: Invalid or expired token
+          schema: {}
+        "500":
+          description: Internal server error
+          schema: {}
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: token
+          in: path
+          required: true
+          type: string
+      tags:
+        - subscription
+  /api/v1/subscribe:
+    post:
+      summary: Subscribe to weather updates
+      description: Subscribe an email to receive weather updates for a specific city with a given frequency.
+      operationId: SubscriptionService_Subscribe
+      responses:
+        "200":
+          description: Returned when subscription is successful
+          schema:
+            $ref: '#/definitions/alphaMessageResponse'
+          examples:
+            application/json:
+              message: Subscribed successfully
+        "400":
+          description: Missing or invalid input fields
+          schema: {}
+          examples:
+            application/json:
+              error: Missing required fields
+        "500":
+          description: Server error during subscription
+          schema: {}
+          examples:
+            application/json:
+              error: Internal server error
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/alphaSubscribeRequest'
+      tags:
+        - subscription
+  /api/v1/unsubscribe/{token}:
+    get:
+      summary: Unsubscribe from weather updates
+      description: Unsubscribe an email from weather updates using a token.
+      operationId: SubscriptionService_Unsubscribe
+      responses:
+        "200":
+          description: Successfully unsubscribed
+          schema:
+            type: object
+            properties: {}
+        "400":
+          description: Invalid unsubscribe token or already unsubscribed
+          schema: {}
+        "500":
+          description: Internal server error
+          schema: {}
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: token
+          in: path
+          required: true
+          type: string
+      tags:
+        - subscription
+definitions:
+  alphaMessageResponse:
+    type: object
+    properties:
+      message:
+        type: string
+  alphaSubscribeRequest:
+    type: object
+    properties:
+      email:
+        type: string
+      city:
+        type: string
+      frequency:
+        type: string
+        title: 'expected: "hourly" or "daily"'
+  protobufAny:
+    type: object
+    properties:
+      '@type':
+        type: string
+    additionalProperties: {}
+  rpcStatus:
+    type: object
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string
+      details:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/protobufAny'

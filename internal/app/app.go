@@ -5,14 +5,19 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
+
+	"google.golang.org/grpc"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pressly/goose/v3"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/logger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerfiles "github.com/swaggo/files"
 	swagger "github.com/swaggo/gin-swagger"
@@ -28,11 +33,14 @@ import (
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/cache"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/logger"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/metrics"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/subscriptions"
 	serviceWeather "github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/weather/decorators"
 	fLogger "github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+	"github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/subs"
+	weatherpb "github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/weather"
 )
 
 const (
@@ -45,6 +53,7 @@ type ServiceContainer struct {
 	EmailService        *email.Service
 	Notificator         *notifier.Notifier
 	SubRepository       repository.SubscriptionRepository
+	GrpcServer          *grpc.Server
 
 	Router     *gin.Engine
 	Srv        *http.Server
@@ -122,6 +131,13 @@ func (a *App) Stop(srvContainer ServiceContainer) error {
 
 	srvContainer.Notificator.Stop()
 	a.log.Println("Notifier stopped")
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down gRPC server...")
+	srvContainer.GrpcServer.GracefulStop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
 	defer cancel()
@@ -232,6 +248,24 @@ func (a *App) init() ServiceContainer {
 
 	cacheDecorator := decorators.NewCachedService(weatherService, cacheWithMetrics, a.log)
 
+	subService := subscriptions.NewService(subRepository, emailService)
+
+	lis, err := net.Listen("tcp", "127.0.0.1:50051")
+	if err != nil {
+		a.log.Panic(err)
+	}
+	grpcServer := grpc.NewServer()
+
+	weatherpb.RegisterWeatherServiceServer(grpcServer, decorators.NewWeatherGRPCServer(cacheDecorator))
+	subs.RegisterSubscriptionServiceServer(grpcServer, subscriptions.NewSubscriptionGRPCServer(subService))
+
+	go func() {
+		log.Println("gRPC server running at :50051")
+		if err := grpcServer.Serve(lis); err != nil {
+			a.log.Panicf("gRPC server failed: %v", err)
+		}
+	}()
+
 	notificator := notifier.New(subRepository,
 		cacheDecorator,
 		emailService,
@@ -242,10 +276,11 @@ func (a *App) init() ServiceContainer {
 
 	srvContainer := ServiceContainer{
 		WeatherService:      cacheDecorator,
-		SubscriptionService: subscriptions.NewService(subRepository, emailService),
+		SubscriptionService: subService,
 		EmailService:        emailService,
 		SubRepository:       *subRepository,
 		Notificator:         notificator,
+		GrpcServer:          grpcServer,
 
 		Router: router,
 		Srv:    apiServer,
