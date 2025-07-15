@@ -57,12 +57,10 @@ I need to compare to communication protocols (HTTP and gRPC) and choose which to
 
 | Caller | Callee | Protocol | Rationale |
 | --- | --- | --- | --- |
-| API Gateway | Subscription Service | HTTP/REST | External-facing; broad client compatibility |
-| API Gateway | Weather Aggregator Service | HTTP/REST | Exposed to UI; leverages HTTP caching semantics |
-| Subscription Service | Notification Orchestrator | gRPC | Low-latency, internal command invocation |
-| Notification Orchestrator | Email Service | gRPC | Efficient, typed calls for transactional emails |
+| API Gateway | Subscription Service | gRPC | Low-latency, internal command invocation |
+| API Gateway | Weather Aggregator Service | gRPC | Efficient, typed calls for transactional emails |
 | Subscription Service | Email Service | gRPC | Direct send of confirmation code emails |
-| Notification Orchestrator | Weather Aggregator Service | gRPC | Fast retrieval of weather data for notifications |
+| Subscription Service | Weather Aggregator Service | gRPC | Fast retrieval of weather data for notifications |
 | Weather Aggregator Service (in future more)  | Metrics Service | HTTP/REST | Prometheus scraper pulls `/metrics` endpoints |
 
 ## Result Service Architecture
@@ -70,12 +68,11 @@ I need to compare to communication protocols (HTTP and gRPC) and choose which to
 ```mermaid
 flowchart TB
     APIGW[API Gateway / BFF]
-    APIGW -->|HTTP/REST| SubsSvc[Subscription Service]
-    APIGW -->|HTTP/REST| WthSvc[Weather Aggregator Service]
-    SubsSvc -->|gRPC| NotifOrch[Notification Orchestrator Service]
-    NotifOrch -->|gRPC| EmailSvc[Email Service]
-    SubsSvc -->|gRPC| EmailSvc
-    NotifOrch -->|gRPC| WthSvc
+    APIGW -->|gRPC| SubsSvc[Subscription Service]
+    APIGW -->|gRPC| WthSvc[Weather Aggregator Service]
+    SubsSvc --> |Send Email| MessageBroker{{Message Broker}}
+    MessageBroker -->| Send Email| EmailSvc
+    SubsSvc -->|gRPC| WthSvc
     EmailSvc -->|SMTP| SMTP[External SMTP]
         
     WthSvc((Weather Service)) -->|/metrics| Metrics[Metrics Service]
