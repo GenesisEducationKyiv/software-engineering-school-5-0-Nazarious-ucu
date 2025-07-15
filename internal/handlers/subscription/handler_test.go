@@ -16,13 +16,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 )
 
 type mockService struct {
 	mock.Mock
 }
 
-func (m *mockService) Subscribe(ctx context.Context, data subscription.UserSubData) error {
+func (m *mockService) Subscribe(ctx context.Context, data models.UserSubData) error {
 	args := m.Called(ctx, data)
 
 	return args.Error(0)
