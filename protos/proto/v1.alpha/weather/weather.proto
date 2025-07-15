@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package weather.v1;
+
+option go_package = "github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/weather;weather";
+
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+
+service WeatherService {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_tag) = {
+    name: "Weather"
+    description: "Provides current weather information by city name."
+  };
+
+  rpc GetByCity(WeatherRequest) returns (WeatherResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/weather"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get current weather"
+      description: "Returns the current weather for a given city"
+      tags: ["weather"]
+      responses: {
+        key: "200"
+        value: {
+          description: "Successfully retrieved weather data"
+          examples: {
+            key: "application/json"
+            value: '{"city": "Lviv", "temperature": 21.5, "condition": "Sunny"}'
+          }
+        }
+      }
+      responses: {
+        key: "400"
+        value: {
+          description: "Missing city query parameter"
+          examples: {
+            key: "application/json"
+            value: '{"error": "city query parameter is required"}'
+          }
+        }
+      }
+      responses: {
+        key: "404"
+        value: {
+          description: "City not found"
+          examples: {
+            key: "application/json"
+            value: '{"error": "City not found"}'
+          }
+        }
+      }
+      responses: {
+        key: "500"
+        value: {
+          description: "Internal server error"
+          examples: {
+            key: "application/json"
+            value: '{"error": "unexpected error"}'
+          }
+        }
+      }
+    };
+  }
+}
+
+message WeatherRequest {
+  string city = 1;
+}
+
+message WeatherResponse {
+  string city = 1;
+  double temperature = 2;
+  string condition = 3;
+}

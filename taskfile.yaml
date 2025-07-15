@@ -74,7 +74,7 @@ tasks:
   swag-gen:
     desc: "Generate swagger files"
     deps:
-      - install:goose
+      - install:swaggo
     dir: ./main
     cmds:
       - swag init --parseDependency --parseInternal --output ../docs -g ./main.go
