@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'App dashboards'
+    orgId: 1
+    folder: 'General1'
+    type: file
+    disableDeletion: false
+    options:
+      path: /var/lib/grafana/dashboards
+    datasource: Prometheus
+    DS_PROMETHEUS: Prometheus
