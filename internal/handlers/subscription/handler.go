@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,14 +16,8 @@ const timeoutDuration = 10 * time.Second
 
 var ErrSubscriptionExists = errors.New("subscription already exists")
 
-type UserSubData struct {
-	Email     string `json:"email" binding:"required,email"`
-	City      string `json:"city" binding:"required"`
-	Frequency string `json:"frequency" binding:"required,oneof=hourly daily"`
-}
-
 type subscriber interface {
-	Subscribe(ctx context.Context, data UserSubData) error
+	Subscribe(ctx context.Context, data models.UserSubData) error
 	Confirm(ctx context.Context, token string) (bool, error)
 	Unsubscribe(ctx context.Context, token string) (bool, error)
 }
@@ -48,7 +44,7 @@ func NewHandler(svc subscriber) *Handler {
 // @Failure 500
 // @Router /subscribe [post]
 func (h *Handler) Subscribe(c *gin.Context) {
-	var userData UserSubData
+	var userData models.UserSubData
 	if err := c.ShouldBind(&userData); err != nil {
 		log.Printf("Failed to bind user data: %s", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required fields"})
