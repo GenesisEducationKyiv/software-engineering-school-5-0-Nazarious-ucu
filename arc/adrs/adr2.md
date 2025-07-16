@@ -79,9 +79,6 @@ flowchart TB
     Metrics -->|scrape| Prometheus[Prometheus]
     Prometheus --> Grafana[Grafana Dashboard]
 ```
-
-In future consider to add a message broker for some communication between services.
-
 ## Summary:
 
 Split the monolith into focused microservices for scalability, fault isolation, and faster deployments, using REST (client/metrics), gRPC (internal), SMTP (email).
