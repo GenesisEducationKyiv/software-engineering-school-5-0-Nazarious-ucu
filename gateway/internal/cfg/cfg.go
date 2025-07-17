@@ -12,7 +12,7 @@ type Server struct {
 type Config struct {
 	Server      Server
 	SubAddr     string `envconfig:"SUB_ADDR" default:":8081"`
-	WeatherAddr string `envconfig:"WEATHER_ADDR" default:":8082"`
+	WeatherAddr string `envconfig:"WEATHER_SERVER_ADDRESS" default:":8082"`
 }
 
 func NewConfig() (*Config, error) {
