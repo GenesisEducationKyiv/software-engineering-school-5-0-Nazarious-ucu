@@ -37,17 +37,6 @@ func NewWeatherServiceClient(cc grpc.ClientConnInterface) WeatherServiceClient {
 	return &weatherServiceClient{cc}
 }
 
-// GetWeather
-// @Summary Get current weather
-// @Description Returns the current weather for a given city
-// @Tags weather
-// @Accept json
-// @Produce json
-// @Param city query string true "City name"
-// @Success 200 {object} models.WeatherData
-// @Failure 400
-// @Failure 500
-// @Router /weather [get]
 func (c *weatherServiceClient) GetByCity(ctx context.Context, in *WeatherRequest, opts ...grpc.CallOption) (*WeatherResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(WeatherResponse)

@@ -1,8 +1,6 @@
 package app
 
 import (
-	"context"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net"
 	"net/http"
@@ -10,6 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/weather/handlers"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	weatherpb "github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/weather"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/config"
@@ -44,7 +45,7 @@ func New(cfg config.Config, logger *log.Logger) *App {
 	}
 }
 
-func (a *App) Start(ctx context.Context) error {
+func (a *App) Start() error {
 	srvContainer := a.init()
 
 	a.log.Println("starting weather service on:", a.cfg.Server.Port)
@@ -151,16 +152,16 @@ func (a *App) init() ServiceContainer {
 
 	cacheDecorator := decorators.NewCachedService(weatherService, cacheWithMetrics, a.log)
 
-	lis, err := net.Listen("tcp", "127.0.0.1:50051")
+	lis, err := net.Listen("tcp", a.cfg.Server.Host+a.cfg.Server.Port)
 	if err != nil {
 		a.log.Panic(err)
 	}
 	grpcServer := grpc.NewServer()
 
-	weatherpb.RegisterWeatherServiceServer(grpcServer, decorators.NewWeatherGRPCServer(cacheDecorator))
+	weatherpb.RegisterWeatherServiceServer(grpcServer, handlers.NewWeatherGRPCServer(cacheDecorator))
 
 	go func() {
-		log.Println("gRPC server running at :50051")
+		log.Println("gRPC server running at :50052")
 		if err := grpcServer.Serve(lis); err != nil {
 			a.log.Panicf("gRPC server failed: %v", err)
 		}

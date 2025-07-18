@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"google.golang.org/grpc/credentials/insecure"
+
 	"google.golang.org/grpc"
 
 	"github.com/gin-gonic/gin"
@@ -47,8 +49,12 @@ const (
 	timeoutDuration = 5 * time.Second
 )
 
+type weatherGetterService interface {
+	GetByCity(ctx context.Context, city string) (models.WeatherData, error)
+}
+
 type ServiceContainer struct {
-	WeatherService      *decorators.CachedService
+	WeatherService      weatherGetterService
 	SubscriptionService *subscriptions.Service
 	EmailService        *email.Service
 	Notificator         *notifier.Notifier
@@ -256,7 +262,23 @@ func (a *App) init() ServiceContainer {
 	}
 	grpcServer := grpc.NewServer()
 
-	weatherpb.RegisterWeatherServiceServer(grpcServer, decorators.NewWeatherGRPCServer(cacheDecorator))
+	opt := grpc.WithTransportCredentials(insecure.NewCredentials())
+	grpcClient, err := grpc.NewClient(a.cfg.WeatherRPCAddr+a.cfg.WeatherRPCPort, opt)
+
+	if err != nil {
+		a.log.Panicf("failed to create gRPC client: %v", err)
+	} else {
+		a.log.Printf(
+			"gRPC client created successfully for address: %s",
+			a.cfg.WeatherRPCAddr+a.cfg.WeatherRPCPort,
+		)
+	}
+
+	weatherGrpc := weatherpb.NewWeatherServiceClient(grpcClient)
+
+	weatherAdapter := serviceWeather.NewGrpcWeatherAdapter(weatherGrpc, a.log)
+
+	weatherpb.RegisterWeatherServiceServer(grpcServer, decorators.NewWeatherGRPCServer(weatherAdapter))
 	subs.RegisterSubscriptionServiceServer(grpcServer, subscriptions.NewSubscriptionGRPCServer(subService))
 
 	go func() {
@@ -275,7 +297,7 @@ func (a *App) init() ServiceContainer {
 	)
 
 	srvContainer := ServiceContainer{
-		WeatherService:      cacheDecorator,
+		WeatherService:      *weatherAdapter,
 		SubscriptionService: subService,
 		EmailService:        emailService,
 		SubRepository:       *subRepository,

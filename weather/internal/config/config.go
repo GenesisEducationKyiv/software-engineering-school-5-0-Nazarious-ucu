@@ -3,7 +3,8 @@ package config
 import "github.com/kelseyhightower/envconfig"
 
 type Server struct {
-	Port        string `envconfig:"WEATHER_SERVER_PORT" default:":8082"`
+	Host        string `envconfig:"WEATHER_SERVER_HOST" default:"localhost"`
+	Port        string `envconfig:"WEATHER_SERVER_PORT" default:":50052"`
 	ReadTimeout int    `envconfig:"WEATHER_SERVER_TIMEOUT" default:"10"`
 }
 

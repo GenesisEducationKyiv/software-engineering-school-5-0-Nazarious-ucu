@@ -51,6 +51,9 @@ type Config struct {
 	WeatherBitAPIKey string `envconfig:"WEATHER_BIT_API_KEY" required:"true"`
 	WeatherBitURL    string `envconfig:"WEATHER_BIT_URL" required:"true"`
 
+	WeatherRPCAddr string `envconfig:"WEATHER_SERVER_ADDR" default:"localhost"`
+	WeatherRPCPort string `envconfig:"WEATHER_SERVER_PORT" default:":8082"`
+
 	Server       Server
 	Email        Email
 	DB           Db

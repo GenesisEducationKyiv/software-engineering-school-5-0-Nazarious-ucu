@@ -1,4 +1,4 @@
-FROM golang:1.24.3 AS builder
+FROM golang:1.24.5 AS builder
 
 WORKDIR /app
 
@@ -7,8 +7,8 @@ RUN go mod download
 
 COPY . .
 
-RUN go install github.com/swaggo/swag/cmd/swag@latest
-RUN /go/bin/swag init -g ./main/main.go
+#RUN go install github.com/swaggo/swag/cmd/swag@latest
+#RUN /go/bin/swag init -g ./main/main.go
 
 RUN CGO_ENABLED=0 go build -o weather-app ./main/main.go
 

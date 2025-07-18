@@ -1,13 +1,18 @@
-package decorators
+package handlers
 
 import (
 	"context"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/models"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	weatherpb "github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/weather"
 )
+
+type weatherGetterService interface {
+	GetByCity(ctx context.Context, city string) (models.WeatherData, error)
+}
 
 type WeatherGRPCServer struct {
 	weatherpb.UnimplementedWeatherServiceServer
