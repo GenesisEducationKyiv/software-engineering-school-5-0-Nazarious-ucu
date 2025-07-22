@@ -43,3 +43,24 @@ tasks:
       - sleep 2
       - go test -v -tags=integration ./...
       - docker compose -f docker-compose.test.yml down
+
+  migrations-up:
+    desc: "Start migrations for db"
+    deps:
+      - install:goose
+    cmds:
+      - goose -dir migrations sqlite3 subscriptions.db up
+
+  migrations-down:
+    desc: "Rollback migrations"
+    deps:
+      - install:goose
+    cmds:
+      - goose -dir migrations sqlite3 subscriptions.db down
+
+  migrations-status:
+    desc: "Show migration status"
+    deps:
+      - install:goose
+    cmds:
+      - goose -dir migrations sqlite3 subscriptions.db status
