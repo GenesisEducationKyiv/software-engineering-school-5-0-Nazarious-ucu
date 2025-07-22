@@ -81,7 +81,7 @@ func New(cfg config.Config, logger *log.Logger) *App {
 
 func (a *App) Start(ctx context.Context) error {
 	srvContainer := a.init()
-	a.log.Println("Starting server on", a.cfg.Server.Address)
+	a.log.Println("Starting server on", a.cfg.Server.Port)
 
 	defer func() {
 		if err := srvContainer.Srv.Close(); err != nil {
@@ -113,7 +113,7 @@ func (a *App) Start(ctx context.Context) error {
 
 	<-ctx.Done()
 
-	a.log.Println("Application started successfully on", a.cfg.Server.Address)
+	a.log.Println("Application started successfully on", a.cfg.Server.Port)
 	defer func() {
 		if err := a.Stop(srvContainer); err != nil {
 			a.log.Panicf("failed to shutdown application: %v", err)
@@ -183,7 +183,7 @@ func (a *App) init() ServiceContainer {
 	router := gin.Default()
 
 	apiServer := &http.Server{
-		Addr:        a.cfg.Server.Address,
+		Addr:        a.cfg.ServerAddress(),
 		Handler:     router,
 		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout) * time.Second,
 	}
@@ -257,7 +257,9 @@ func (a *App) init() ServiceContainer {
 	subService := subscriptions.NewService(subRepository, emailService)
 
 	lc := net.ListenConfig{}
-	lis, err := lc.Listen(ctx, "tcp", "127.0.0.1:50051")
+	lis, err := lc.Listen(ctx,
+		"tcp",
+		a.cfg.Server.Address+":50051")
 	if err != nil {
 		a.log.Panic(err)
 	}

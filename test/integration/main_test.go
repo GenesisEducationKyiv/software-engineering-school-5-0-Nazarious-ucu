@@ -35,7 +35,8 @@ func TestMain(m *testing.M) {
 	cfg.DB.Source = "test.db"
 	cfg.DB.MigrationsPath = "../../migrations"
 
-	cfg.Server.Address = "127.0.0.1:8081"
+	cfg.Server.Address = "127.0.0.1"
+	cfg.Server.Port = "8081"
 
 	application := app.New(*cfg, log.Default())
 	ctx := context.Background()
@@ -68,7 +69,7 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
-	initIntegration("http://"+cfg.Server.Address, database)
+	initIntegration("http://"+cfg.ServerAddress(), database)
 	time.Sleep(100 * time.Millisecond)
 
 	// Run the tests

@@ -3,7 +3,12 @@ LABEL authors="nazar"
 
 WORKDIR /app
 
-COPY . .
+COPY weather/ ./weather
+COPY .env .env
+COPY protos/ ./protos
+COPY docs/ ./docs
+
+
 WORKDIR /app/weather
 ENV WEATHER_SERVER_HOST="0.0.0.0"
 

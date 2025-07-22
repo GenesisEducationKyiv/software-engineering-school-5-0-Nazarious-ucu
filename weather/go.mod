@@ -2,9 +2,7 @@ module github.com/Nazarious-ucu/weather-subscription-api/weather
 
 go 1.24.5
 
-replace (
-	github.com/Nazarious-ucu/weather-subscription-api/protos => ../protos
-)
+replace github.com/Nazarious-ucu/weather-subscription-api/protos => ../protos
 
 require (
 	github.com/Nazarious-ucu/weather-subscription-api/protos v0.0.0-00010101000000-000000000000
@@ -34,6 +32,7 @@ require (
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect

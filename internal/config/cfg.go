@@ -6,6 +6,7 @@ import (
 
 type Server struct {
 	Address     string `envconfig:"SERVER_ADDRESS" default:":8080"`
+	Port        string `envconfig:"SERVER_PORT" default:"8080"`
 	ReadTimeout int    `envconfig:"SERVER_TIMEOUT" default:"10"`
 }
 
@@ -71,4 +72,8 @@ func NewConfig() (*Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+func (c *Config) ServerAddress() string {
+	return c.Server.Address + ":" + c.Server.Port
 }

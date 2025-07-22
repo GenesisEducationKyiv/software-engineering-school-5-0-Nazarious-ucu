@@ -1,27 +1,28 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:latest AS builder
 
 WORKDIR /app
 
-RUN apk add --no-cache git ca-certificates tzdata
+COPY gateway/ ./gateway
+COPY .env .env
+COPY protos/ ./protos
 
-COPY go.mod go.sum ./
+WORKDIR /app/gateway
+
 RUN go mod download
 
-COPY . .
-
-RUN go build -o gateway ./main
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o gateway-app ./main/main.go
 
 FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=builder /app/gateway /app/gateway
-COPY --from=builder /etc/ssl/certs /etc/ssl/certs
+RUN apk add --no-cache git ca-certificates tzdata
 
-COPY .env .env
+COPY --from=builder /app/gateway .
+COPY --from=builder /app/.env .env
 
 ENV GIN_MODE=release
 
 EXPOSE 8080
 
-CMD ["./gateway"]
+CMD ["./gateway-app"]

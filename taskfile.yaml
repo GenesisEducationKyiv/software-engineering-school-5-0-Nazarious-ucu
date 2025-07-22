@@ -16,8 +16,16 @@ tasks:
 
   run:
     desc: "Run service"
+    dotenv:
+      - .env
     cmds:
       - docker-compose up -d
+  run:build:
+    desc: "Run service"
+    dotenv:
+        - .env
+    cmds:
+      - docker-compose up -d --build
 
   stop:
     desc: "Stop service"

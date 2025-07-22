@@ -5,14 +5,25 @@ import (
 )
 
 type Server struct {
-	Address     string `envconfig:"GATEWAY_SERVER_ADDRESS" default:":8081"`
+	Address     string `envconfig:"GATEWAY_SERVER_ADDRESS" default:"localhost"`
+	Port        string `envconfig:"GATEWAY_SERVER_PORT" default:"8081"`
 	ReadTimeout int    `envconfig:"GATEWAY_SERVER_TIMEOUT" default:"10"`
 }
 
+type WeatherServer struct {
+	Host string `envconfig:"WEATHER_HOST" default:"localhost"`
+	Port string `envconfig:"WEATHER_PORT" default:"8080"`
+}
+
+type SubServer struct {
+	Host string `envconfig:"SUB_HOST" default:"localhost"`
+	Port string `envconfig:"SUB_PORT" default:"8082"`
+}
+
 type Config struct {
-	Server      Server
-	SubAddr     string `envconfig:"SUB_ADDR" default:":8081"`
-	WeatherAddr string `envconfig:"WEATHER_SERVER_ADDRESS" default:":8082"`
+	Server        Server
+	SubServer     SubServer
+	WeatherServer WeatherServer
 }
 
 func NewConfig() (*Config, error) {
@@ -21,4 +32,16 @@ func NewConfig() (*Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+func (c *Config) ServerAddress() string {
+	return c.Server.Address + ":" + c.Server.Port
+}
+
+func (w WeatherServer) Address() string {
+	return w.Host + ":" + w.Port
+}
+
+func (s SubServer) Address() string {
+	return s.Host + ":" + s.Port
 }
