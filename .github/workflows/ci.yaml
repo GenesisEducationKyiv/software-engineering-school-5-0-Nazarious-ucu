@@ -36,6 +36,8 @@ jobs:
         with:
           go-version-file: 'go.mod'
           install-goose: 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run DB migrations
         run: task migrations-up
@@ -51,6 +53,8 @@ jobs:
         uses: ./.github/actions/setup
         with:
           go-version-file: 'go.mod'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Unit Tests
         run: task test:unit
@@ -67,6 +71,8 @@ jobs:
         with:
           go-version-file: 'go.mod'
           install-goose: 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Integration Tests
         run: task test:integration
