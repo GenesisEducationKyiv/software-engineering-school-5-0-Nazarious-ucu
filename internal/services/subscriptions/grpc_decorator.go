@@ -3,7 +3,7 @@ package subscriptions
 import (
 	"context"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/subscription"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/subs"
 	"google.golang.org/grpc/codes"
@@ -12,7 +12,7 @@ import (
 )
 
 type subscriber interface {
-	Subscribe(ctx context.Context, data subscription.UserSubData) error
+	Subscribe(ctx context.Context, data models.UserSubData) error
 	Confirm(ctx context.Context, token string) (bool, error)
 	Unsubscribe(ctx context.Context, token string) (bool, error)
 }
@@ -30,7 +30,7 @@ func (s *SubscriptionGRPCServer) Subscribe(
 	ctx context.Context,
 	req *subs.SubscribeRequest,
 ) (*subs.MessageResponse, error) {
-	data := subscription.UserSubData{
+	data := models.UserSubData{
 		Email:     req.GetEmail(),
 		City:      req.GetCity(),
 		Frequency: req.GetFrequency(),
