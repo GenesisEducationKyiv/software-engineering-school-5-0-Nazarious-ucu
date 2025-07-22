@@ -256,7 +256,8 @@ func (a *App) init() ServiceContainer {
 
 	subService := subscriptions.NewService(subRepository, emailService)
 
-	lis, err := net.Listen("tcp", "127.0.0.1:50051")
+	lc := net.ListenConfig{}
+	lis, err := lc.Listen(ctx, "tcp", "127.0.0.1:50051")
 	if err != nil {
 		a.log.Panic(err)
 	}
