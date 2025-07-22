@@ -64,3 +64,10 @@ tasks:
       - install:goose
     cmds:
       - goose -dir migrations sqlite3 subscriptions.db status
+
+  install:goose:
+    desc: "Install goose"
+    cmds:
+      - go install github.com/pressly/goose/v3/cmd/goose@latest
+    status:
+      - command -v goose
