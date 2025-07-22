@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"log"
 	"net"
 	"net/http"
@@ -44,8 +45,8 @@ func New(cfg config.Config, logger *log.Logger) *App {
 	}
 }
 
-func (a *App) Start() error {
-	srvContainer := a.init()
+func (a *App) Start(ctx context.Context) error {
+	srvContainer := a.init(ctx)
 
 	a.log.Println("starting weather service on:", a.cfg.Server.Port)
 
@@ -88,7 +89,7 @@ func (a *App) Shutdown(srvContainer ServiceContainer) error {
 	return nil
 }
 
-func (a *App) init() ServiceContainer {
+func (a *App) init(ctx context.Context) ServiceContainer {
 	a.log.Println("Initializing weather service with configuration:", a.cfg)
 
 	redisClient := newRedisConnection(a.cfg.Redis.Host+":"+a.cfg.Redis.Port, a.cfg.Redis.DbType)
@@ -155,7 +156,8 @@ func (a *App) init() ServiceContainer {
 
 	addrGrpc := a.cfg.ServerAddress()
 
-	lis, err := net.Listen("tcp", addrGrpc)
+	lc := net.ListenConfig{}
+	lis, err := lc.Listen(ctx, "tcp", addrGrpc)
 	if err != nil {
 		a.log.Panic(err)
 	}

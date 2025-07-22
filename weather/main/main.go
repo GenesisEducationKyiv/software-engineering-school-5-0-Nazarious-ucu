@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/config"
@@ -23,8 +25,13 @@ func main() {
 	// Initialize the application
 	application := app.New(*cfg, l)
 
+	ctxWithTimeout, cancel := context.WithTimeout(
+		context.Background(),
+		time.Duration(cfg.Server.ReadTimeout)*time.Second)
+	defer cancel()
+
 	// Run the application
-	if err := application.Start(); err != nil {
+	if err := application.Start(ctxWithTimeout); err != nil {
 		log.Panicf("Application failed to run: %v", err)
 	}
 }

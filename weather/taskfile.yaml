@@ -37,7 +37,7 @@ tasks:
   test:integration:
     desc: "Run integration tests (requires docker-compose.test.yml)"
     dotenv:
-      - .env.example
+      - ../.env.example
     cmds:
       - docker compose -f docker-compose.test.yml up -d
       - sleep 2

@@ -3,6 +3,7 @@
 package api
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -45,8 +46,12 @@ func TestMain(m *testing.M) {
 	cfg.Server.Port = "8081"
 
 	application := app.New(*cfg, log.Default())
+	ctxWithTimeout, cancel := context.WithTimeout(
+		context.Background(),
+		time.Duration(cfg.Server.ReadTimeout)*time.Second)
+
 	go func() {
-		if err := application.Start(); err != nil {
+		if err := application.Start(ctxWithTimeout); err != nil {
 			log.Panic(err)
 		}
 	}()
@@ -60,7 +65,7 @@ func TestMain(m *testing.M) {
 	testWeatherAPIServer.Close()
 	testOpenWeatherAPIServer.Close()
 	testWeatherBitAPIServer.Close()
-
+	cancel()
 	os.Exit(code)
 }
 
