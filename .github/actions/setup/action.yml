@@ -30,7 +30,7 @@ runs:
     - name: Install Task
       uses: arduino/setup-task@v2
       with:
-        token: ${{ env.GITHUB_TOKEN }}
+        repo-token: ${{ env.GITHUB_TOKEN }}
 
     - name: Install Goose
       shell: sh
