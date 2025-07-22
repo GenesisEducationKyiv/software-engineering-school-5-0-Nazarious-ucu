@@ -32,8 +32,8 @@ import (
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/handlers/weather"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/models"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/notifier"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository"
-	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/cache"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository/cache"
+	"github.com/Nazarious-ucu/weather-subscription-api/internal/repository/sqlite"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/email"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/logger"
 	"github.com/Nazarious-ucu/weather-subscription-api/internal/services/metrics"
@@ -58,7 +58,7 @@ type ServiceContainer struct {
 	SubscriptionService *subscriptions.Service
 	EmailService        *email.Service
 	Notificator         *notifier.Notifier
-	SubRepository       repository.SubscriptionRepository
+	SubRepository       sqlite.SubscriptionRepository
 	GrpcServer          *grpc.Server
 
 	Router     *gin.Engine
@@ -192,7 +192,7 @@ func (a *App) init() ServiceContainer {
 
 	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
 	a.log.Printf("Initializing SMTP service with config: %+v\n", a.cfg.Email)
-	subRepository := repository.NewSubscriptionRepository(db, a.log)
+	subRepository := sqlite.NewSubscriptionRepository(db, a.log)
 	emailService := email.NewService(smtpService, a.cfg.TemplatesDir)
 
 	fileLogger, err := fLogger.NewFileLogger(a.cfg.LogsPath)

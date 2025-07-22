@@ -32,7 +32,7 @@ Created by: Назар Парносов
     - У разі підписки або запиту погоди **Services** формує й надсилає відповідний лист.
 2. Архітектура
 
-   ![architecture.png](architecture.png)
+   ![detailed-architecture.png](detailed-architecture.png)
 
     1. Клієнт робить HTTP-запит до одного з під-API (`/api/subscribe`, `/api/confirm`, `/api/unsubscribe` або `/api/weather`).
     2. Запит проходить через **Handlers**, які викликають відповідні методи шару **Services**.

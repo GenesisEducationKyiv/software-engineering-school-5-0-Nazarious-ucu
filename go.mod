@@ -7,6 +7,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/mstrYoda/go-arctest v0.0.0-20250422073853-ff9fe79f31d7
 	github.com/pressly/goose/v3 v3.24.3
 	github.com/prometheus/client_golang v1.22.0
 	github.com/redis/go-redis/v9 v9.11.0
