@@ -14,7 +14,7 @@ jobs:
       - name: Set up env
         uses: ./.github/actions/setup
         with:
-          go-version-file: 'go.mod'
+          go-version-file: 'weather/go.mod'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -32,7 +32,7 @@ jobs:
       - name: Set up env
         uses: ./.github/actions/setup
         with:
-          go-version-file: 'go.mod'
+          go-version-file: 'weather/go.mod'
         env:
           GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
 
@@ -50,11 +50,10 @@ jobs:
       - name: Set up env
         uses: ./.github/actions/setup
         with:
-          go-version-file: 'go.mod'
+          go-version-file: 'weather/go.mod'
           install-goose: 'true'
         env:
           GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
-
 
       - name: Run Integration Tests
         run: task weather:test:integration
