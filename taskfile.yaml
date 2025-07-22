@@ -11,6 +11,9 @@ includes:
   gateway:
     taskfile: ./gateway/taskfile.yaml
     dir: ./gateway
+  subscriptions:
+      taskfile: ./subscriptions/taskfile.yaml
+      dir: ./subscriptions
 
 tasks:
 
@@ -39,7 +42,9 @@ tasks:
     preconditions:
       - command -v golangci-lint
     cmds:
-      - golangci-lint run --config <(curl -sSfL https://raw.githubusercontent.com/fabl3ss/genesis-se-school-linter/refs/heads/main/.golangci.yaml) --modules-download-mode=readonly
+      - task: gateway:lint
+      - task: weather:lint
+      - task: subscriptions:lint
 
   format:
     desc: "Run gofumpt to format code"
@@ -119,16 +124,12 @@ tasks:
   test:unit:
     desc: "Run unit tests"
     cmds:
-      - go test -v -tags=unit ./...
+      - task: subscriptions:test:unit
+      - task: weather:test:unit
 
   test:integration:
     desc: "Run integration tests (requires docker-compose.test.yml)"
-    dotenv:
-      - .env.example
     cmds:
-      - docker compose -f docker-compose.test.yml up -d
-      - sleep 2
-      - go test -v -tags=integration ./...
-      - docker compose -f docker-compose.test.yml down
-
+      - task: subscriptions:test:integration
+      - task: weather:test:integration
 
