@@ -20,24 +20,26 @@ tasks:
     desc: "Install all tools"
     deps:
       - install:lint
-      - install:godotenv
+
 
   install:lint:
     desc: "Install golangci-lint"
     cmds:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
     status:
-        - command -v golangci-lint
+      - command -v golangci-lint
 
-  install:godotenv:
-    desc: "Install go dot env lib"
+  test:unit:
+    desc: "Run unit tests"
     cmds:
-      - go install github.com/joho/godotenv/cmd/godotenv@latest
-    status:
-      - command godotenv
+      - go test -v -tags=unit ./...
 
-  gen:swagger:
-    desc: "Generate swagger docs"
-    dir: ./main
+  test:integration:
+    desc: "Run integration tests (requires docker-compose.test.yml)"
+    dotenv:
+      - .env.example
     cmds:
-      - swag init --parseDependency --parseInternal -g /main.go --output ../docs
+      - docker compose -f docker-compose.test.yml up -d
+      - sleep 2
+      - go test -v -tags=integration ./...
+      - docker compose -f docker-compose.test.yml down

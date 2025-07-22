@@ -1,8 +1,7 @@
-name: monolith-CI
-
+name: weather-CI
 on:
   push:
-    branches: ['*']
+    branches: [ '*' ]
 
 jobs:
   lint:
@@ -21,24 +20,7 @@ jobs:
 
 
       - name: Run Linter
-        run: task lint
-
-
-  migrate-test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up env
-        uses: ./.github/actions/setup
-        with:
-          go-version-file: 'go.mod'
-          install-goose: 'true'
-
-      - name: Run DB migrations
-        run: task migrations-up
+        run: task weather:lint
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -53,7 +35,7 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: Run Unit Tests
-        run: task test:unit
+        run: task weather:test:unit
 
   integration-tests:
     runs-on: ubuntu-latest
@@ -69,4 +51,4 @@ jobs:
           install-goose: 'true'
 
       - name: Run Integration Tests
-        run: task test:integration
+        run: task weather:test:integration

@@ -3,7 +3,6 @@ module github.com/Nazarious-ucu/weather-subscription-api/weather
 go 1.24.5
 
 replace (
-	github.com/Nazarious-ucu/weather-subscription-api => ../
 	github.com/Nazarious-ucu/weather-subscription-api/protos => ../protos
 )
 

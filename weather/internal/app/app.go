@@ -9,10 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/weather/handlers"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-
 	weatherpb "github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/weather"
+	"github.com/Nazarious-ucu/weather-subscription-api/weather/handlers"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/config"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/models"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/services/cache"
@@ -21,6 +19,7 @@ import (
 	serviceWeather "github.com/Nazarious-ucu/weather-subscription-api/weather/internal/services/weather"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/services/weather/decorators"
 	fLogger "github.com/Nazarious-ucu/weather-subscription-api/weather/pkg/logger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -55,12 +54,18 @@ func (a *App) Start() error {
 	router.Handle("/metrics", promhttp.Handler())
 
 	a.log.Println("Weather service started successfully on", a.cfg.Server.Port)
+
 	defer func() {
 		if err := a.Shutdown(srvContainer); err != nil {
 			a.log.Panicf("failed to shutdown application: %v", err)
 		}
 		a.log.Println("Application shutdown successfully")
 	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
 	return nil
 }
 
@@ -75,10 +80,6 @@ func (a *App) Shutdown(srvContainer ServiceContainer) error {
 			a.log.Println("File logger synced successfully")
 		}
 	}(srvContainer.fileLogger)
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
 
 	log.Println("Shutting down gRPC server...")
 	srvContainer.GrpcServer.GracefulStop()
@@ -152,7 +153,9 @@ func (a *App) init() ServiceContainer {
 
 	cacheDecorator := decorators.NewCachedService(weatherService, cacheWithMetrics, a.log)
 
-	lis, err := net.Listen("tcp", a.cfg.Server.Host+a.cfg.Server.Port)
+	addrGrpc := a.cfg.ServerAddress()
+
+	lis, err := net.Listen("tcp", addrGrpc)
 	if err != nil {
 		a.log.Panic(err)
 	}
@@ -161,7 +164,7 @@ func (a *App) init() ServiceContainer {
 	weatherpb.RegisterWeatherServiceServer(grpcServer, handlers.NewWeatherGRPCServer(cacheDecorator))
 
 	go func() {
-		log.Println("gRPC server running at :50052")
+		log.Printf("gRPC server running at %s", addrGrpc)
 		if err := grpcServer.Serve(lis); err != nil {
 			a.log.Panicf("gRPC server failed: %v", err)
 		}

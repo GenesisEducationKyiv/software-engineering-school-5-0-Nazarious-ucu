@@ -4,6 +4,14 @@ version: '3'
 dotenv:
   - .env
 
+includes:
+  weather:
+    taskfile: ./weather/taskfile.yaml
+    dir: ./weather
+  gateway:
+    taskfile: ./gateway/taskfile.yaml
+    dir: ./gateway
+
 tasks:
 
   run:
@@ -25,10 +33,23 @@ tasks:
     cmds:
       - golangci-lint run --config <(curl -sSfL https://raw.githubusercontent.com/fabl3ss/genesis-se-school-linter/refs/heads/main/.golangci.yaml) --modules-download-mode=readonly
 
+  format:
+    desc: "Run gofumpt to format code"
+    deps:
+      - install:gofumpt
+    preconditions:
+      - command -v gofumpt
+    cmds:
+      - gofumpt -l -w .
+
   install:
     desc: "Install all packages"
     deps:
       - install:lint
+      - install:gofumpt
+      - install:goose
+      - install:swaggo
+      - weather:install
 
   install:lint:
     desc: "Install golangci-lint"
@@ -49,6 +70,13 @@ tasks:
       - go install github.com/swaggo/swag/cmd/swag@latest
     status:
       - command -v swag
+
+  install:gofumpt:
+    desc: "Install gofumpt"
+    cmds:
+      - go install mvdan.cc/gofumpt@latest
+    status:
+      - command -v gofumpt
 
   migrations-up:
     desc: "Start migrations for db"

@@ -7,8 +7,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -31,30 +29,11 @@ func TestMain(m *testing.M) {
 		log.Panicf("failed to load configuration: %v", err)
 	}
 
-	// Initialize the test testWeatherAPIServer
-	testWeatherAPIServer := NewTestWeatherAPIServer()
-	defer testWeatherAPIServer.Close()
-
-	testOpenWeatherAPIServer := newTestOpenWeatherAPIServer()
-	defer testOpenWeatherAPIServer.Close()
-
-	testWeatherBitAPIServer := newWeatherBitTestServer()
-	defer testWeatherBitAPIServer.Close()
-
 	cfg.Email.Host = "localhost"
 	cfg.Email.Port = "1025"
 
 	cfg.DB.Source = "test.db"
 	cfg.DB.MigrationsPath = "../../migrations"
-
-	cfg.WeatherAPIURL = testWeatherAPIServer.URL
-	cfg.WeatherAPIKey = "secret-key-weatherapi"
-
-	cfg.OpenWeatherMapAPIKey = "secret-key-open-weather"
-	cfg.OpenWeatherMapURL = testOpenWeatherAPIServer.URL
-
-	cfg.WeatherBitAPIKey = "secret-key-weatherbit"
-	cfg.WeatherBitURL = testWeatherBitAPIServer.URL
 
 	cfg.Server.Address = "127.0.0.1:8081"
 
@@ -108,37 +87,6 @@ func resetTables(db *sql.DB) error {
 	return nil
 }
 
-func NewTestWeatherAPIServer() *httptest.Server {
-	fakeWeatherData := `{
-       "location": {"name":"H_E_L_L"},
-       "current": {"temp_c":10000.0, "condition": {"text":"Sunny"}}
-   }`
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := r.URL.Query().Get("key")
-		city := r.URL.Query().Get("q")
-
-		// If invalid city
-		if city == "InvalidCity" {
-			http.Error(w, "City not found", http.StatusNotFound)
-			return
-		}
-		// correct key - return data
-		if key == "secret-key-weatherapi" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(fakeWeatherData))
-			if err != nil {
-				http.Error(w, "Failed to write response", http.StatusInternalServerError)
-				return
-			}
-			return
-		}
-		// unauthorized key
-		http.Error(w, "Invalid API key", http.StatusUnauthorized)
-	})
-	return httptest.NewServer(handler)
-}
-
 func initIntegration(serverURL string, database *sql.DB) {
 	testServerURL = serverURL
 	db = database
@@ -174,87 +122,4 @@ func saveSubscription(t *testing.T, email, city string, freq string, token strin
 		email, city, freq, token,
 	)
 	assert.NoErrorf(t, err, "failed to save subscription: %v", err)
-}
-
-func newTestOpenWeatherAPIServer() *httptest.Server {
-	const mockWeatherResponse = `{
-		  "main": {
-			"temp": 22.5,
-			"feels_like": 24.0,
-			"pressure": 1013,
-			"humidity": 60
-		  },
-		  "weather": [
-			{
-			  "main": "Clear",
-			  "description": "clear sky"
-			},
-			{
-			  "main": "Wind",
-			  "description": "light breeze"
-			}
-		  ]
-		}`
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := r.URL.Query().Get("key")
-		city := r.URL.Query().Get("q")
-
-		// If invalid city
-		if city == "InvalidCity" {
-			http.Error(w, "City not found", http.StatusNotFound)
-			return
-		}
-		// correct key - return data
-		if key == "secret-key-open-weather" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(mockWeatherResponse))
-			if err != nil {
-				http.Error(w, "Failed to write response", http.StatusInternalServerError)
-				return
-			}
-			return
-		}
-		// unauthorized key
-		http.Error(w, "Invalid API key", http.StatusUnauthorized)
-	})
-	return httptest.NewServer(handler)
-}
-
-func newWeatherBitTestServer() *httptest.Server {
-	const mockBitWeatherResponse = `{
-		  "data": [
-			{
-			  "city_name": "Odesa",
-			  "temp": 27.5,
-			  "weather": {
-				"description": "sunny"
-			  }
-			}
-		  ]
-		}`
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := r.URL.Query().Get("key")
-		city := r.URL.Query().Get("city")
-
-		// If invalid city
-		if city == "InvalidCity" {
-			http.Error(w, "City not found", http.StatusNotFound)
-			return
-		}
-		// correct key - return data
-		if key == "secret-key-weatherbit" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(mockBitWeatherResponse))
-			if err != nil {
-				http.Error(w, "Failed to write response", http.StatusInternalServerError)
-				return
-			}
-			return
-		}
-		// unauthorized key
-		http.Error(w, "Invalid API key", http.StatusUnauthorized)
-	})
-	return httptest.NewServer(handler)
 }

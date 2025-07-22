@@ -1,16 +1,47 @@
 services:
+
+  weather-service:
+    build:
+      context: ./weather
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    restart: on-failure
+    container_name: weather-service
+    env_file:
+      - .env
+    networks:
+      - default
+
   weather-api:
     build:
       context: .
       dockerfile: Dockerfile
     platform: linux/amd64
     container_name: weather-api
+    restart: on-failure
     ports:
-      - "8080:8080"
+      - "8080:${SERVER_ADDRESS:-8080}"
     env_file:
       - .env
     volumes:
       - ./subscriptions.db:/app/subscriptions.db
+    depends_on:
+      - weather-service
+
+  gateway:
+    build:
+      context: .
+      dockerfile: ./gateway/Dockerfile
+    platform: linux/amd64
+    container_name: weather-gateway
+    restart: on-failure
+    ports:
+      - "8081:${GATEWAY_PORT:-8081}"
+    env_file:
+      - .env
+    depends_on:
+      - weather-api
+      - weather-service
 
   redis:
     image: redis:7-alpine
@@ -51,4 +82,20 @@ volumes:
   redis-data:
 
   prometheus-data:
+
+networks:
+    default:
+        driver: bridge
+
+    monitoring:
+        driver: bridge
+        external: true
+
+    grafana:
+        driver: bridge
+        external: true
+
+    prometheus:
+        driver: bridge
+        external: true
 
