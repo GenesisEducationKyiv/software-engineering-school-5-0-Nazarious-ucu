@@ -10,8 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/handlers"
+
 	weatherpb "github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/weather"
-	"github.com/Nazarious-ucu/weather-subscription-api/weather/handlers"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/config"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/models"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/services/cache"

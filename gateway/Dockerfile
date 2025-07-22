@@ -16,7 +16,7 @@ FROM alpine:latest
 
 WORKDIR /app
 
-RUN apk add --no-cache git ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata
 
 COPY --from=builder /app/gateway .
 COPY --from=builder /app/.env .env

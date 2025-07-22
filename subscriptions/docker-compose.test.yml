@@ -1,0 +1,16 @@
+services:
+  smtp_mock:
+    image: mailhog/mailhog
+    container_name: smtp_mock
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+        - test_network
+
+volumes:
+  redis-data:
+
+networks:
+  test_network:
+    driver: bridge
