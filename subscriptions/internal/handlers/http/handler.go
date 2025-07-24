@@ -1,4 +1,4 @@
-package subscription
+package http
 
 import (
 	"context"
@@ -30,19 +30,6 @@ func NewHandler(svc subscriber) *Handler {
 	return &Handler{Service: svc}
 }
 
-// Subscribe
-// @Summary Subscribe to weather updates
-// @Description Subscribe an email to receive weather updates for a specific city.
-// @Tags subscription
-// @Accept application/x-www-form-urlencoded
-// @Param email formData string true "Email address to subscribe"
-// @Param city formData string true "City for weather updates"
-// @Param frequency formData string true "Frequency of updates" Enums(hourly, daily)
-// @Success 200
-// @Failure 400
-// @Failure 404
-// @Failure 500
-// @Router /subscribe [post]
 func (h *Handler) Subscribe(c *gin.Context) {
 	var userData models.UserSubData
 	if err := c.ShouldBind(&userData); err != nil {
@@ -68,15 +55,6 @@ func (h *Handler) Subscribe(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Subscribed successfully"})
 }
 
-// Confirm
-// @Summary Confirm subscription
-// @Description Confirms the subscription using the token sent in email.
-// @Tags subscription
-// @Param token path string true "Confirmation token"
-// @Success 200
-// @Failure 400
-// @Failure 404
-// @Router /confirm/{token} [get]
 func (h *Handler) Confirm(c *gin.Context) {
 	log.Printf("token: %s", c.Param("token"))
 	token := c.Param("token")
@@ -96,15 +74,6 @@ func (h *Handler) Confirm(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-// Unsubscribe
-// @Summary Unsubscribe
-// @Description Unsubscribe from weather updates using the token.
-// @Tags subscription
-// @Param token path string true "Unsubscribe token"
-// @Success 200
-// @Failure 400
-// @Failure 404
-// @Router /unsubscribe/{token} [get]
 func (h *Handler) Unsubscribe(c *gin.Context) {
 	token := c.Param("token")
 

@@ -11,13 +11,15 @@ type Server struct {
 }
 
 type WeatherServer struct {
-	Host string `envconfig:"WEATHER_HOST" default:"localhost"`
-	Port string `envconfig:"WEATHER_PORT" default:"8080"`
+	Host     string `envconfig:"WEATHER_HOST" default:"localhost"`
+	GrpcPort string `envconfig:"WEATHER_GRPC_PORT" default:"50052"`
+	HTTPPort string `envconfig:"WEATHER_HTTP_PORT" default:"8082"`
 }
 
 type SubServer struct {
-	Host string `envconfig:"SUB_HOST" default:"localhost"`
-	Port string `envconfig:"SUB_PORT" default:"8082"`
+	Host     string `envconfig:"SUB_HOST" default:"localhost"`
+	GrpcPort string `envconfig:"SUB_PORT" default:"50051"`
+	HTTPPort string `envconfig:"SUB_HTTP_PORT" default:"8080"`
 }
 
 type Config struct {
@@ -39,9 +41,9 @@ func (c *Config) ServerAddress() string {
 }
 
 func (w WeatherServer) Address() string {
-	return w.Host + ":" + w.Port
+	return w.Host + ":" + w.GrpcPort
 }
 
 func (s SubServer) Address() string {
-	return s.Host + ":" + s.Port
+	return s.Host + ":" + s.GrpcPort
 }

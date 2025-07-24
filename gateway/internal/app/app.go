@@ -10,6 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/handlers/subscription"
+	weatherHTTP "github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/handlers/weather"
+
 	httpSwagger "github.com/swaggo/http-swagger"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -60,6 +63,19 @@ func (a *App) Start(ctx context.Context) error {
 		Handler:     httpMux,
 		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout) * time.Second,
 	}
+
+	subHandler := subscription.NewHandler(
+		&http.Client{},
+		a.cfg.SubServer.Host+":"+a.cfg.SubServer.HTTPPort,
+		a.log)
+
+	weathHandler := weatherHTTP.NewHandler(
+		&http.Client{},
+		a.cfg.WeatherServer.Host+":"+a.cfg.WeatherServer.HTTPPort,
+		a.log)
+
+	weathHandler.RegisterRoutes(httpMux)
+	subHandler.RegisterRoutes(httpMux)
 
 	go func() {
 		a.log.Printf("Gateway listening on %s", a.cfg.ServerAddress())

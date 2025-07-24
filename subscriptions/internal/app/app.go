@@ -12,9 +12,11 @@ import (
 	"syscall"
 	"time"
 
+	grpc2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/grpc"
+	http2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/http"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/config"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/emailer"
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/subscription"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/models"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/notifier"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/repository/sqlite"
@@ -73,7 +75,7 @@ func New(cfg config.Config, logger *log.Logger) *App {
 
 func (a *App) Start(ctx context.Context) error {
 	srvContainer := a.init()
-	a.log.Println("Starting server on", a.cfg.Server.Port)
+	a.log.Println("Starting server on", a.cfg.Server.GrpcPort)
 
 	defer func() {
 		if err := srvContainer.Srv.Close(); err != nil {
@@ -81,14 +83,12 @@ func (a *App) Start(ctx context.Context) error {
 		}
 	}()
 
-	subHandler := subscription.NewHandler(srvContainer.SubscriptionService)
+	subHandler := http2.NewHandler(srvContainer.SubscriptionService)
 
-	api := srvContainer.Router.Group("/api")
-	{
-		api.POST("/subscribe", subHandler.Subscribe)
-		api.GET("/confirm/:token", subHandler.Confirm)
-		api.GET("/unsubscribe/:token", subHandler.Unsubscribe)
-	}
+	srvContainer.Router.POST("/subscribe", subHandler.Subscribe)
+	srvContainer.Router.GET("/confirm/:token", subHandler.Confirm)
+	srvContainer.Router.GET("/unsubscribe/:token", subHandler.Unsubscribe)
+
 	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
 	srvContainer.Router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
@@ -103,7 +103,7 @@ func (a *App) Start(ctx context.Context) error {
 
 	<-ctx.Done()
 
-	a.log.Println("Application started successfully on", a.cfg.Server.Port)
+	a.log.Println("Application started successfully on", a.cfg.Server.GrpcPort)
 	defer func() {
 		if err := a.Stop(srvContainer); err != nil {
 			a.log.Panicf("failed to shutdown application: %v", err)
@@ -189,7 +189,7 @@ func (a *App) init() ServiceContainer {
 	lc := net.ListenConfig{}
 	lis, err := lc.Listen(ctx,
 		"tcp",
-		a.cfg.Server.Address+":50051")
+		a.cfg.Server.Address+":"+a.cfg.Server.GrpcPort)
 	if err != nil {
 		a.log.Panic(err)
 	}
@@ -211,7 +211,7 @@ func (a *App) init() ServiceContainer {
 
 	weatherAdapter := weather.NewGrpcWeatherAdapter(weatherGrpc, a.log)
 
-	subs.RegisterSubscriptionServiceServer(grpcServer, subs2.NewSubscriptionGRPCServer(subService))
+	subs.RegisterSubscriptionServiceServer(grpcServer, grpc2.NewSubscriptionGRPCServer(subService))
 
 	go func() {
 		log.Println("gRPC server running at :50051")

@@ -5,9 +5,10 @@ import (
 )
 
 type Server struct {
-	Address     string `envconfig:"SERVER_ADDRESS" default:":8080"`
-	Port        string `envconfig:"SERVER_PORT" default:"8080"`
-	ReadTimeout int    `envconfig:"SERVER_TIMEOUT" default:"10"`
+	Address     string `envconfig:"SUB_SERVER_ADDRESS" default:":8080"`
+	GrpcPort    string `envconfig:"SUB_SERVER_GRPC_PORT" default:"8080"`
+	HTTPPort    string `envconfig:"SUB_SERVER_HTTP_PORT" default:"8080"`
+	ReadTimeout int    `envconfig:"SUB_SERVER_TIMEOUT" default:"10"`
 }
 
 type Email struct {
@@ -75,5 +76,5 @@ func NewConfig() (*Config, error) {
 }
 
 func (c *Config) ServerAddress() string {
-	return c.Server.Address + ":" + c.Server.Port
+	return c.Server.Address + ":" + c.Server.HTTPPort
 }

@@ -43,7 +43,7 @@ func TestMain(m *testing.M) {
 	cfg.WeatherBitURL = testWeatherBitAPIServer.URL
 
 	cfg.Server.Host = "127.0.0.1"
-	cfg.Server.Port = "8081"
+	cfg.Server.GrpcPort = "8081"
 
 	application := app.New(*cfg, log.Default())
 	ctxWithTimeout, cancel := context.WithTimeout(

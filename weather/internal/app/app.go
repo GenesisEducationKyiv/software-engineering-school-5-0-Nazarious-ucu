@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/handlers"
+	grpc2 "github.com/Nazarious-ucu/weather-subscription-api/weather/internal/handlers/grpc"
+	http2 "github.com/Nazarious-ucu/weather-subscription-api/weather/internal/handlers/http"
+	"github.com/gin-gonic/gin"
 
 	weatherpb "github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/weather"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/config"
@@ -31,6 +33,8 @@ type ServiceContainer struct {
 	WeatherService *decorators.CachedService
 	GrpcServer     *grpc.Server
 
+	Router     *gin.Engine
+	Srv        *http.Server
 	fileLogger *zap.Logger
 }
 
@@ -49,13 +53,17 @@ func New(cfg config.Config, logger *log.Logger) *App {
 func (a *App) Start(ctx context.Context) error {
 	srvContainer := a.init(ctx)
 
-	a.log.Println("starting weather service on:", a.cfg.Server.Port)
+	a.log.Println("starting weather service on:", a.cfg.Server.GrpcPort)
 
 	router := http.NewServeMux()
 
 	router.Handle("/metrics", promhttp.Handler())
 
-	a.log.Println("Weather service started successfully on", a.cfg.Server.Port)
+	weatherHandler := http2.NewHandler(srvContainer.WeatherService)
+
+	srvContainer.Router.GET("/weather", weatherHandler.GetWeather)
+
+	a.log.Println("Weather service started successfully on", a.cfg.Server.GrpcPort)
 
 	defer func() {
 		if err := a.Shutdown(srvContainer); err != nil {
@@ -155,7 +163,15 @@ func (a *App) init(ctx context.Context) ServiceContainer {
 
 	cacheDecorator := decorators.NewCachedService(weatherService, cacheWithMetrics, a.log)
 
-	addrGrpc := a.cfg.ServerAddress()
+	addrGrpc := a.cfg.Server.Host + ":" + a.cfg.Server.GrpcPort
+
+	router := gin.Default()
+
+	apiServer := &http.Server{
+		Addr:        a.cfg.ServerAddress(),
+		Handler:     router,
+		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout) * time.Second,
+	}
 
 	lc := net.ListenConfig{}
 	lis, err := lc.Listen(ctx, "tcp", addrGrpc)
@@ -164,7 +180,9 @@ func (a *App) init(ctx context.Context) ServiceContainer {
 	}
 	grpcServer := grpc.NewServer()
 
-	weatherpb.RegisterWeatherServiceServer(grpcServer, handlers.NewWeatherGRPCServer(cacheDecorator))
+	weatherpb.RegisterWeatherServiceServer(grpcServer, grpc2.NewWeatherGRPCServer(cacheDecorator))
+
+	a.log.Printf("Application initialized on address: %s", apiServer.Addr)
 
 	go func() {
 		log.Printf("gRPC server running at %s", addrGrpc)
@@ -177,6 +195,8 @@ func (a *App) init(ctx context.Context) ServiceContainer {
 		WeatherService: cacheDecorator,
 		GrpcServer:     grpcServer,
 
+		Router:     router,
+		Srv:        apiServer,
 		fileLogger: fileLogger,
 	}
 

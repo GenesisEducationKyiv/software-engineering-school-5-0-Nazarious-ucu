@@ -6,7 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/subscription"
+	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/http"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/models"
 
 	_ "modernc.org/sqlite"
@@ -35,7 +36,7 @@ func (r *SubscriptionRepository) Create(
 		return err
 	}
 	if cnt > 0 {
-		return subscription.ErrSubscriptionExists
+		return http.ErrSubscriptionExists
 	}
 	r.logger.Println("Creating subscription for email:", data.Email, "city:", data.City)
 	_, err = r.DB.ExecContext(ctx,

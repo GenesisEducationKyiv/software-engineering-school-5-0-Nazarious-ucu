@@ -4,7 +4,8 @@ import "github.com/kelseyhightower/envconfig"
 
 type Server struct {
 	Host        string `envconfig:"WEATHER_SERVER_HOST" default:"0.0.0.0"`
-	Port        string `envconfig:"WEATHER_SERVER_PORT" default:"50052"`
+	GrpcPort    string `envconfig:"WEATHER_SERVER_GRPC_PORT" default:"50052"`
+	HTTPPort    string `envconfig:"WEATHER_SERVER_HTTP_PORT" default:"8082"`
 	ReadTimeout int    `envconfig:"WEATHER_SERVER_TIMEOUT" default:"10"`
 }
 
@@ -47,5 +48,5 @@ func NewConfig() (*Config, error) {
 }
 
 func (c *Config) ServerAddress() string {
-	return c.Server.Host + ":" + c.Server.Port
+	return c.Server.Host + ":" + c.Server.HTTPPort
 }

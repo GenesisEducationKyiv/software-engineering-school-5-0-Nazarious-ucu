@@ -1,4 +1,4 @@
-package weather
+package http
 
 import (
 	"context"
@@ -25,17 +25,6 @@ func NewHandler(svc weatherGetterService) *Handler {
 	return &Handler{service: svc}
 }
 
-// GetWeather
-// @Summary Get current weather
-// @Description Returns the current weather for a given city
-// @Tags weather
-// @Accept json
-// @Produce json
-// @Param city query string true "City name"
-// @Success 200 {object} models.WeatherData
-// @Failure 400
-// @Failure 500
-// @Router /weather [get]
 func (h *Handler) GetWeather(c *gin.Context) {
 	city := c.Query("city")
 	if city == "" {
