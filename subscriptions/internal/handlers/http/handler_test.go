@@ -1,6 +1,6 @@
 //go:build unit
 
-package subscription_test
+package http_test
 
 import (
 	"context"
@@ -10,7 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/subscription"
+	http2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/http"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -88,7 +89,7 @@ func TestSubscribeEndpoint(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			c.Request = req
 
-			h := subscription.NewHandler(m)
+			h := http2.NewHandler(m)
 			h.Subscribe(c)
 
 			assert.Equal(t, tc.wantCode, rec.Code)
@@ -147,7 +148,7 @@ func TestConfirmEndpoint(t *testing.T) {
 
 			c.Request = req
 
-			h := subscription.NewHandler(m)
+			h := http2.NewHandler(m)
 			h.Confirm(c)
 
 			assert.Equal(t, tc.wantCode, rec.Code)
@@ -203,7 +204,7 @@ func TestUnsubscribeEndpoint(t *testing.T) {
 
 			c.Request = req
 
-			h := subscription.NewHandler(m)
+			h := http2.NewHandler(m)
 			h.Unsubscribe(c)
 
 			assert.Equal(t, tc.wantCode, rec.Code)

@@ -1,6 +1,6 @@
 //go:build unit
 
-package weather_test
+package http_test
 
 import (
 	"context"
@@ -10,7 +10,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/handlers/weather"
+	http2 "github.com/Nazarious-ucu/weather-subscription-api/weather/internal/handlers/http"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/models"
 
 	"github.com/stretchr/testify/mock"
@@ -51,7 +52,7 @@ func TestGetWeather_NoCity(t *testing.T) {
 
 	c.Request = req
 
-	h := weather.NewHandler(m)
+	h := http2.NewHandler(m)
 
 	h.GetWeather(c)
 
@@ -77,7 +78,7 @@ func TestGetWeather_ServiceError(t *testing.T) {
 
 	c.Request = req
 
-	h := weather.NewHandler(m)
+	h := http2.NewHandler(m)
 
 	h.GetWeather(c)
 
@@ -97,7 +98,7 @@ func TestGetWeather_Success(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	h := weather.NewHandler(m)
+	h := http2.NewHandler(m)
 
 	req, err := http.NewRequest(http.MethodGet, "/weather?city=Kyiv", nil)
 	assert.NoError(t, err)
