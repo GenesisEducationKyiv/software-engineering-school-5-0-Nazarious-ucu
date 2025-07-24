@@ -19,12 +19,12 @@ var ErrSubscriptionExists = errors.New("subscription already exists")
 
 type Handler struct {
 	client *http.Client
-	subUrl string
+	subURL string
 	logger *log.Logger
 }
 
-func NewHandler(client *http.Client, subscribeUrl string, logger *log.Logger) *Handler {
-	return &Handler{client: client, subUrl: subscribeUrl, logger: logger}
+func NewHandler(client *http.Client, subscribeURL string, logger *log.Logger) *Handler {
+	return &Handler{client: client, subURL: subscribeURL, logger: logger}
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
@@ -79,7 +79,12 @@ func (h *Handler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.subUrl+"/subscribe", bytes.NewReader(jsonBytes))
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		h.subURL+"/subscribe",
+		bytes.NewReader(jsonBytes))
+
 	if err != nil {
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
@@ -91,15 +96,20 @@ func (h *Handler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to send request", http.StatusInternalServerError)
 		return
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+	defer func(body io.ReadCloser) {
+		err := body.Close()
 		if err != nil {
 			h.logger.Printf("Error closing response body: %v", err)
 		}
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			h.logger.Printf("Failed to read response body: %s", err)
+			http.Error(w, "Failed to read response", http.StatusInternalServerError)
+			return
+		}
 		h.logger.Printf("Subscription error: %s", string(bodyBytes))
 
 		switch resp.StatusCode {
@@ -149,7 +159,7 @@ func (h *Handler) handleConfirm(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), timeoutDuration)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.subUrl+"/confirm/"+token, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.subURL+"/confirm/"+token, nil)
 	if err != nil {
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
@@ -160,15 +170,20 @@ func (h *Handler) handleConfirm(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to send request", http.StatusInternalServerError)
 		return
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+	defer func(body io.ReadCloser) {
+		err := body.Close()
 		if err != nil {
 			h.logger.Printf("Error closing response body: %v", err)
 		}
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			h.logger.Printf("Failed to read response body: %s", err)
+			http.Error(w, "Failed to read response", http.StatusInternalServerError)
+			return
+		}
 		h.logger.Printf("Confirm error: %s", string(bodyBytes))
 		http.Error(w, "Failed to confirm subscription", resp.StatusCode)
 		return
@@ -210,7 +225,7 @@ func (h *Handler) handleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), timeoutDuration)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.subUrl+"/unsubscribe/"+token, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.subURL+"/unsubscribe/"+token, nil)
 	if err != nil {
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
@@ -221,16 +236,14 @@ func (h *Handler) handleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to send request", http.StatusInternalServerError)
 		return
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+	defer func(body io.ReadCloser) {
+		err := body.Close()
 		if err != nil {
 			h.logger.Printf("Error closing response body: %v", err)
 		}
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		h.logger.Printf("Unsubscribe error: %s", string(bodyBytes))
 		http.Error(w, "Failed to unsubscribe", resp.StatusCode)
 		return
 	}

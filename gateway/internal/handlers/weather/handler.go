@@ -61,8 +61,8 @@ func (h *Handler) handleGetWeather(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to contact weather service", http.StatusInternalServerError)
 		return
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+	defer func(body io.ReadCloser) {
+		err := body.Close()
 		if err != nil {
 			h.logger.Printf("Error closing response body: %v", err)
 		}
