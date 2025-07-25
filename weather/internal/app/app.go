@@ -5,9 +5,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	grpc2 "github.com/Nazarious-ucu/weather-subscription-api/weather/internal/handlers/grpc"
@@ -72,10 +69,7 @@ func (a *App) Start(ctx context.Context) error {
 		a.log.Println("Application shutdown successfully")
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
+	<-ctx.Done()
 	return nil
 }
 

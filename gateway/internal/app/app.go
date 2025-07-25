@@ -5,9 +5,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/handlers/subscription"
@@ -85,10 +82,7 @@ func (a *App) Start(ctx context.Context) error {
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	<-quit
+	<-ctx.Done()
 
 	a.log.Println("Shutting down gateway gracefully...")
 

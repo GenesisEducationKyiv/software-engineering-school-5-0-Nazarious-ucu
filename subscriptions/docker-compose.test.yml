@@ -8,9 +8,6 @@ services:
     networks:
         - test_network
 
-volumes:
-  redis-data:
-
 networks:
   test_network:
     driver: bridge

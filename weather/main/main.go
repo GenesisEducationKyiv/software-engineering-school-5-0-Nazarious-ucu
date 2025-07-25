@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"log"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/app"
@@ -30,8 +32,11 @@ func main() {
 		time.Duration(cfg.Server.ReadTimeout)*time.Second)
 	defer cancel()
 
+	ctx, stop := signal.NotifyContext(ctxWithTimeout, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	// Run the application
-	if err := application.Start(ctxWithTimeout); err != nil {
+	if err := application.Start(ctx); err != nil {
 		log.Panicf("Application failed to run: %v", err)
 	}
 }

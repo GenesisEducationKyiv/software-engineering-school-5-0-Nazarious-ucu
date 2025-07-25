@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"log"
+	"os/signal"
+	"syscall"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/config"
@@ -29,7 +31,10 @@ func main() {
 
 	application := app.New(*cfg, l)
 
-	if err := application.Start(context.Background()); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	if err := application.Start(ctx); err != nil {
 		log.Panic(err)
 	}
 }

@@ -100,10 +100,10 @@ func (a *App) Start(ctx context.Context) error {
 	if err := srvContainer.Srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
+	a.log.Println("Application started successfully on", a.cfg.Server.GrpcPort)
 
 	<-ctx.Done()
 
-	a.log.Println("Application started successfully on", a.cfg.Server.GrpcPort)
 	defer func() {
 		if err := a.Stop(srvContainer); err != nil {
 			a.log.Panicf("failed to shutdown application: %v", err)
