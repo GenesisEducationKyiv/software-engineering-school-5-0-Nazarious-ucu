@@ -52,7 +52,7 @@ func TestUnsubscribeFlow(t *testing.T) {
 
 			// Create HTTP GET request to test server URL
 
-			url := testServerURL + "/api/unsubscribe/" + tc.token
+			url := testServerURL + "/unsubscribe/" + tc.token
 			req, err := http.NewRequestWithContext(
 				context.Background(),
 				http.MethodGet,

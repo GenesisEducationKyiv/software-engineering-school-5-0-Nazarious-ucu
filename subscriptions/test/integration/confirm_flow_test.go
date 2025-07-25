@@ -66,7 +66,7 @@ func TestPostConfirm(t *testing.T) {
 			ctx := context.Background()
 			// Create a new HTTP GET request
 			req, err := http.NewRequestWithContext(ctx,
-				http.MethodGet, testServerURL+"/api/confirm/"+tc.token, nil)
+				http.MethodGet, testServerURL+"/confirm/"+tc.token, nil)
 			assert.NoError(t, err)
 
 			// Perform the request

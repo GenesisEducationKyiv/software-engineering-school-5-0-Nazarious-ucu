@@ -84,7 +84,6 @@ func (h *Handler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 		http.MethodPost,
 		h.subURL+"/subscribe",
 		bytes.NewReader(jsonBytes))
-
 	if err != nil {
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return

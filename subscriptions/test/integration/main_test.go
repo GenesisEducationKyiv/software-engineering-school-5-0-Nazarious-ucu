@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 	cfg.DB.Source = "test.db"
 	cfg.DB.MigrationsPath = "../../migrations"
 
-	cfg.Server.Address = "127.0.0.1"
+	cfg.Server.Host = "127.0.0.1"
 	cfg.Server.GrpcPort = "8081"
 
 	application := app.New(*cfg, log.Default())

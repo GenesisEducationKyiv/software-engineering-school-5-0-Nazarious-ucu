@@ -187,7 +187,7 @@ func (a *App) init() ServiceContainer {
 	lc := net.ListenConfig{}
 	lis, err := lc.Listen(ctx,
 		"tcp",
-		a.cfg.Server.Address+":"+a.cfg.Server.GrpcPort)
+		a.cfg.Server.Host+":"+a.cfg.Server.GrpcPort)
 	if err != nil {
 		a.log.Panic(err)
 	}
