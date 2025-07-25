@@ -104,12 +104,10 @@ func (a *App) Start(ctx context.Context) error {
 
 	<-ctx.Done()
 
-	defer func() {
-		if err := a.Stop(srvContainer); err != nil {
-			a.log.Panicf("failed to shutdown application: %v", err)
-		}
-		a.log.Println("Application shutdown successfully")
-	}()
+	if err := a.Stop(srvContainer); err != nil {
+		a.log.Panicf("failed to shutdown application: %v", err)
+	}
+	a.log.Println("Application shutdown successfully")
 	return nil
 }
 

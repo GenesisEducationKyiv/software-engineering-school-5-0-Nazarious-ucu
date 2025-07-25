@@ -62,14 +62,13 @@ func (a *App) Start(ctx context.Context) error {
 
 	a.log.Println("Weather service started successfully on", a.cfg.Server.GrpcPort)
 
-	defer func() {
-		if err := a.Shutdown(srvContainer); err != nil {
-			a.log.Panicf("failed to shutdown application: %v", err)
-		}
-		a.log.Println("Application shutdown successfully")
-	}()
-
 	<-ctx.Done()
+
+	if err := a.Shutdown(srvContainer); err != nil {
+		a.log.Panicf("failed to shutdown application: %v", err)
+	}
+	a.log.Println("Application shutdown successfully")
+
 	return nil
 }
 

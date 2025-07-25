@@ -5,9 +5,9 @@ import (
 )
 
 type Server struct {
-	Address     string `envconfig:"SUB_SERVER_ADDRESS" default:":8080"`
+	Host        string `envconfig:"SUB_SERVER_HOST" default:"localhost"`
 	GrpcPort    string `envconfig:"SUB_SERVER_GRPC_PORT" default:"8080"`
-	HTTPPort    string `envconfig:"SUB_SERVER_HTTP_PORT" default:"8080"`
+	HTTPPort    string `envconfig:"SUB_SERVER_HTTP_PORT" default:"50051"`
 	ReadTimeout int    `envconfig:"SUB_SERVER_TIMEOUT" default:"10"`
 }
 
@@ -30,19 +30,6 @@ type NotifierFrequency struct {
 	HourlyFrequency string `envconfig:"NOTIFIER_HOURLY_FREQUENCY" default:"0 * * * *"`
 }
 
-type Breaker struct {
-	TimeInterval int    `envconfig:"BREAKER_INTERVAL" default:"30"`
-	TimeTimeOut  int    `envconfig:"BREAKER_TIMEOUT" default:"10"`
-	RepeatNumber uint32 `envconfig:"BREAKER_REPEAT_NUM" default:"5"`
-}
-
-type Redis struct {
-	Host     string `envconfig:"REDIS_HOST" default:"localhost"`
-	Port     string `envconfig:"REDIS_PORT" default:"6379"`
-	DbType   int    `envconfig:"REDIS_DB_TYPE" required:"true"`
-	LiveTime int    `envconfig:"REDIS_LIVE_TIME" default:"1"`
-}
-
 type Config struct {
 	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
 	WeatherAPIURL string `envconfig:"WEATHER_API_URL" required:"true"`
@@ -60,11 +47,8 @@ type Config struct {
 	Email        Email
 	DB           Db
 	NotifierFreq NotifierFrequency
-	Breaker      Breaker
-	Redis        Redis
 
 	TemplatesDir string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
-	LogsPath     string `envconfig:"LOGS_PATH" default:"./log/weather-subscription-api.log"`
 }
 
 func NewConfig() (*Config, error) {
@@ -76,5 +60,5 @@ func NewConfig() (*Config, error) {
 }
 
 func (c *Config) ServerAddress() string {
-	return c.Server.Address + ":" + c.Server.HTTPPort
+	return c.Server.Host + ":" + c.Server.HTTPPort
 }
