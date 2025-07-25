@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/app"
-	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/config"
-	"github.com/joho/godotenv"
 	"log"
 	"os/signal"
 	"syscall"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/app"
+	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/config"
+	"github.com/joho/godotenv"
 )
 
 func main() {
