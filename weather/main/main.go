@@ -2,14 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
-	"os/signal"
-	"syscall"
-	"time"
-
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/config"
 	"github.com/joho/godotenv"
+	"log"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -27,12 +25,7 @@ func main() {
 	// Initialize the application
 	application := app.New(*cfg, l)
 
-	ctxWithTimeout, cancel := context.WithTimeout(
-		context.Background(),
-		time.Duration(cfg.Server.ReadTimeout)*time.Second)
-	defer cancel()
-
-	ctx, stop := signal.NotifyContext(ctxWithTimeout, syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	// Run the application
