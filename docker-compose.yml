@@ -1,23 +1,23 @@
 services:
 
-  weather-service:
+  weather:
     build:
       context: .
       dockerfile: ./weather/Dockerfile
     platform: linux/amd64
     restart: on-failure
-    container_name: weather-service
+    container_name: weather
     env_file:
       - .env
     networks:
       - default
 
-  sub-service:
+  sub:
     build:
       context: .
       dockerfile: subscriptions/Dockerfile
     platform: linux/amd64
-    container_name: sub-service
+    container_name: sub
     restart: on-failure
     ports:
       - "${SERVER_PORT:-8080}:8080"
@@ -27,7 +27,7 @@ services:
     volumes:
       - ./subscriptions.db:/app/subscriptions.db
     depends_on:
-      - weather-service
+      - weather
 
   gateway:
     build:
@@ -41,8 +41,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - sub-service
-      - weather-service
+      - sub
+      - weather
 
   redis:
     image: redis:7-alpine
@@ -62,7 +62,7 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      - weather-service
+      - weather
 
   grafana:
     image: grafana/grafana:10.4.5
