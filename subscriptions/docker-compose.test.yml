@@ -1,7 +1,6 @@
 services:
   smtp_mock:
     image: mailhog/mailhog
-    container_name: smtp_mock
     ports:
       - "1025:1025"
       - "8025:8025"
