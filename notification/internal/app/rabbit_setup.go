@@ -16,16 +16,6 @@ func (a *App) setupConn() (*rabbitmq.Conn, error) {
 
 	a.log.Println("Connected to RabbitMQ successfully")
 	return conn, nil
-
-	// defer consumer.Close()
-	//
-	// err = consumer.Run(func(d rabbitmq.Delivery) rabbitmq.Action {
-	//	logger.Printf("📧 Sending confirmation email: %s", string(d.Body))
-	//	return rabbitmq.Ack
-	// })
-	// if err != nil {
-	//	logger.Fatalf("consumer failed to run: %v", err)
-	// }
 }
 
 // Create a new consumer for subscription events
@@ -51,8 +41,7 @@ func (a *App) setupWeatherConsumer(conn *rabbitmq.Conn) (*rabbitmq.Consumer, err
 		messaging.WeatherQueueName,
 		rabbitmq.WithConsumerOptionsExchangeName("notifications"),
 		rabbitmq.WithConsumerOptionsExchangeDeclare,
-		rabbitmq.WithConsumerOptionsRoutingKey(messaging.WeatherDailyRoutingKey),
-		rabbitmq.WithConsumerOptionsRoutingKey(messaging.WeatherHourlyRoutingKey),
+		rabbitmq.WithConsumerOptionsRoutingKey(messaging.WeatherRoutingKey),
 		rabbitmq.WithConsumerOptionsQueueDurable,
 	)
 	if err != nil {

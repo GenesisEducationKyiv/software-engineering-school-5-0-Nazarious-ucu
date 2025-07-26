@@ -7,7 +7,7 @@ type NewSubscriptionEvent struct {
 
 type Weather struct {
 	Temperature float64 `json:"temperature"`
-	Humidity    float64 `json:"humidity"`
+	City        string  `json:"city"`
 	Description string  `json:"description"`
 }
 

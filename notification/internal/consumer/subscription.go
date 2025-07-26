@@ -32,7 +32,7 @@ func (c *Consumer) ReceiveSubscription(d rabbitmq.Delivery) rabbitmq.Action {
 
 	var event messaging.NewSubscriptionEvent
 	if err := json.Unmarshal(d.Body, &event); err != nil {
-		log.Printf("❌ Failed to unmarshal message: %v", err)
+		log.Printf("Failed to unmarshal message: %v", err)
 		return rabbitmq.NackDiscard
 	}
 

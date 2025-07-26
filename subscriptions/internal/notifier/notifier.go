@@ -24,7 +24,7 @@ type subscriptionRepository interface {
 }
 
 type emailSender interface {
-	SendWeather(to string, forecast models.WeatherData) error
+	SendWeather(ctx context.Context, to string, forecast models.WeatherData) error
 }
 
 type weatherGetter interface {
@@ -117,7 +117,7 @@ func (n *Notifier) SendOne(ctx context.Context, sub models.Subscription) error {
 		return err
 	}
 
-	if err := n.emailService.SendWeather(sub.Email, forecast); err != nil {
+	if err := n.emailService.SendWeather(ctx, sub.Email, forecast); err != nil {
 		return err
 	}
 

@@ -9,15 +9,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/producers"
+
 	grpc2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/grpc"
 	http2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/http"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/config"
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/emailer"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/models"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/notifier"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/repository/sqlite"
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/services/email"
 	subs2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/services/subscriptions"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/services/weather"
 
@@ -47,7 +47,7 @@ type weatherGetterService interface {
 type ServiceContainer struct {
 	WeatherService      weatherGetterService
 	SubscriptionService *subs2.Service
-	EmailService        *email.Service
+	EmailProducer       *producers.Producer
 	Notificator         *notifier.Notifier
 	SubRepository       sqlite.SubscriptionRepository
 	GrpcServer          *grpc.Server
@@ -170,12 +170,21 @@ func (a *App) init() ServiceContainer {
 
 	a.log.Printf("Application initialized on address: %s", apiServer.Addr)
 
-	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
-	a.log.Printf("Initializing SMTP service with config: %+v\n", a.cfg.Email)
 	subRepository := sqlite.NewSubscriptionRepository(db, a.log)
-	emailService := email.NewService(smtpService, a.cfg.TemplatesDir)
 
-	subService := subs2.NewService(subRepository, emailService)
+	rabbitConn, err := a.setupConn()
+	if err != nil {
+		a.log.Panicf("Failed to connect to RabbitMQ: %v", err)
+	}
+
+	publisher, err := a.setupPublisher(rabbitConn)
+	if err != nil {
+		a.log.Panicf("Failed to create RabbitMQ publisher: %v", err)
+	}
+
+	emailProducer := producers.NewProducer(publisher, a.log)
+
+	subService := subs2.NewService(subRepository, emailProducer)
 
 	lc := net.ListenConfig{}
 	lis, err := lc.Listen(ctx,
@@ -213,7 +222,7 @@ func (a *App) init() ServiceContainer {
 
 	notificator := notifier.New(subRepository,
 		weatherAdapter,
-		emailService,
+		emailProducer,
 		a.log,
 		a.cfg.NotifierFreq.HourlyFrequency,
 		a.cfg.NotifierFreq.DailyFrequency,
@@ -222,7 +231,6 @@ func (a *App) init() ServiceContainer {
 	srvContainer := ServiceContainer{
 		WeatherService:      *weatherAdapter,
 		SubscriptionService: subService,
-		EmailService:        emailService,
 		SubRepository:       *subRepository,
 		Notificator:         notificator,
 		GrpcServer:          grpcServer,

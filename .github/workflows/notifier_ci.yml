@@ -1,4 +1,5 @@
-name: notifier_ci.yml
+name: notifier-CI
+
 on:
   push:
     branches: ['*']

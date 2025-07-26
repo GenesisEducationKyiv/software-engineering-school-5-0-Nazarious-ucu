@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -34,5 +36,5 @@ func NewConfig() (*Config, error) {
 }
 
 func (r *RabbitMQ) Address() string {
-	return r.Host + ":" + r.Port
+	return fmt.Sprintf("amqp://%s:%s@%s:%s/", r.User, r.Pass, r.Host, r.Port)
 }

@@ -1,10 +1,9 @@
 package messaging
 
 const (
-	ExchangeName            = "notifications"
-	WeatherHourlyRoutingKey = "weather_hourly"
-	WeatherDailyRoutingKey  = "weather_daily"
-	SubscribeRoutingKey     = "subscribe"
-	WeatherQueueName        = "weather_queue"
-	SubscribeQueueName      = "subscribe_queue"
+	ExchangeName        = "notifications"
+	WeatherRoutingKey   = "weather_hourly"
+	SubscribeRoutingKey = "subscribe"
+	WeatherQueueName    = "weather_queue"
+	SubscribeQueueName  = "subscribe_queue"
 )
