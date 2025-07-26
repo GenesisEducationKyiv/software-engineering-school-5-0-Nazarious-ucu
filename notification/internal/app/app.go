@@ -3,16 +3,11 @@ package app
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/config"
 	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/consumer"
 	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/emailer"
 	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/services/email"
-)
-
-const (
-	timeoutDuration = 5 * time.Second
 )
 
 type ServiceContainer struct {

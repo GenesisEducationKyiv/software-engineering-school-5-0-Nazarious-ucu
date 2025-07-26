@@ -12,8 +12,11 @@ includes:
     taskfile: ./gateway/taskfile.yaml
     dir: ./gateway
   subscriptions:
-      taskfile: ./subscriptions/taskfile.yaml
-      dir: ./subscriptions
+    taskfile: ./subscriptions/taskfile.yaml
+    dir: ./subscriptions
+  notification:
+    taskfile: ./notification/taskfile.yaml
+    dir: ./notification
 
 tasks:
 
@@ -45,6 +48,7 @@ tasks:
       - task: gateway:lint
       - task: weather:lint
       - task: subscriptions:lint
+      - task: notification:lint
 
   format:
     desc: "Run gofumpt to format code"
@@ -99,6 +103,7 @@ tasks:
     cmds:
       - task: subscriptions:test:unit
       - task: weather:test:unit
+      - task: notification:test:unit
 
   test:integration:
     desc: "Run integration tests (requires docker-compose.test.yml)"

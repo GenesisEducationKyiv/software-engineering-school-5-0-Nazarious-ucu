@@ -17,15 +17,15 @@ func (a *App) setupConn() (*rabbitmq.Conn, error) {
 	a.log.Println("Connected to RabbitMQ successfully")
 	return conn, nil
 
-	//defer consumer.Close()
+	// defer consumer.Close()
 	//
-	//err = consumer.Run(func(d rabbitmq.Delivery) rabbitmq.Action {
+	// err = consumer.Run(func(d rabbitmq.Delivery) rabbitmq.Action {
 	//	logger.Printf("📧 Sending confirmation email: %s", string(d.Body))
 	//	return rabbitmq.Ack
-	//})
-	//if err != nil {
+	// })
+	// if err != nil {
 	//	logger.Fatalf("consumer failed to run: %v", err)
-	//}
+	// }
 }
 
 // Create a new consumer for subscription events
