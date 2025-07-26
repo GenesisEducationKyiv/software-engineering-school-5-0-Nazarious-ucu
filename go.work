@@ -1,8 +1,10 @@
 go 1.24.5
 
 use (
-	./subscriptions
-	./protos
 	./gateway
+	./notification
+	./pkg
+	./protos
+	./subscriptions
 	./weather
 )

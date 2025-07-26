@@ -31,15 +31,6 @@ type NotifierFrequency struct {
 }
 
 type Config struct {
-	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
-	WeatherAPIURL string `envconfig:"WEATHER_API_URL" required:"true"`
-
-	OpenWeatherMapAPIKey string `envconfig:"OPEN_WEATHER_MAP_API_KEY" required:"true"`
-	OpenWeatherMapURL    string `envconfig:"OPEN_WEATHER_MAP_URL" required:"true"`
-
-	WeatherBitAPIKey string `envconfig:"WEATHER_BIT_API_KEY" required:"true"`
-	WeatherBitURL    string `envconfig:"WEATHER_BIT_URL" required:"true"`
-
 	WeatherRPCAddr string `envconfig:"WEATHER_SERVER_ADDR" default:"localhost"`
 	WeatherRPCPort string `envconfig:"WEATHER_SERVER_PORT" default:":8082"`
 

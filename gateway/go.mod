@@ -2,9 +2,7 @@ module github.com/Nazarious-ucu/weather-subscription-api/gateway
 
 go 1.24.5
 
-replace (
-	github.com/Nazarious-ucu/weather-subscription-api/protos => ../protos
-)
+replace github.com/Nazarious-ucu/weather-subscription-api/protos => ../protos
 
 require (
 	github.com/Nazarious-ucu/weather-subscription-api/protos v0.0.0-00010101000000-000000000000
@@ -24,6 +22,7 @@ require (
 	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/swaggo/files v1.0.1 // indirect
 	golang.org/x/mod v0.25.0 // indirect
 	golang.org/x/net v0.40.0 // indirect

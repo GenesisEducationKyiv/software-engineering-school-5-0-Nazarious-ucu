@@ -7,9 +7,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	grpc2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/grpc"
@@ -125,10 +122,6 @@ func (a *App) Stop(srvContainer ServiceContainer) error {
 
 	srvContainer.Notificator.Stop()
 	a.log.Println("Notifier stopped")
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
 
 	log.Println("Shutting down gRPC server...")
 	srvContainer.GrpcServer.GracefulStop()
