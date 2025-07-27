@@ -12,6 +12,7 @@ import (
 
 	"github.com/Nazarious-ucu/weather-subscription-api/pkg/messaging"
 
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/wagslane/go-rabbitmq"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/app"
@@ -78,25 +79,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Panicf("failed to connect to RabbitMQ: %v", err)
 	}
-
-	rabbitmqConsumer, err := rabbitmq.NewConsumer(
-		rmqConn,
-		messaging.SubscribeQueueName,
-		rabbitmq.WithConsumerOptionsExchangeName(messaging.ExchangeName),
-		rabbitmq.WithConsumerOptionsExchangeDeclare,
-		rabbitmq.WithConsumerOptionsExchangeDurable,
-		rabbitmq.WithConsumerOptionsRoutingKey(messaging.SubscribeRoutingKey),
-		rabbitmq.WithConsumerOptionsQueueDurable,
-		rabbitmq.WithConsumerOptionsConsumerName("pre-test-binding"),
-	)
-	if err != nil {
-		log.Panicf("failed to bind queue before tests: %v", err)
+	if err := forceDeclareRabbitQueue(cfg.RabbitMQ.Address()); err != nil {
+		log.Panicf("failed to declare queue and binding manually: %v", err)
 	}
-	log.Println("RabbitMQ consumer started")
-	defer func() {
-		log.Println("RabbitMQ consumer stopped")
-		rabbitmqConsumer.Close()
-	}()
 
 	initIntegration("http://"+cfg.ServerAddress(), database)
 	time.Sleep(100 * time.Millisecond)
@@ -176,4 +161,64 @@ func readLatestRabbitMQMessage(consumer *rabbitmq.Consumer, queue string) ([]byt
 	case <-ctx.Done():
 		return nil, fmt.Errorf("timeout waiting for message from queue %s", queue)
 	}
+}
+
+func forceDeclareRabbitQueue(amqpURL string) error {
+	conn, err := amqp.Dial(amqpURL)
+	if err != nil {
+		return fmt.Errorf("amqp dial failed: %w", err)
+	}
+	defer func(conn *amqp.Connection) {
+		err := conn.Close()
+		if err != nil {
+			log.Printf("Failed to close AMQP connection: %v", err)
+		} else {
+			log.Println("AMQP connection closed successfully")
+		}
+	}(conn)
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return fmt.Errorf("amqp channel error: %w", err)
+	}
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		if err != nil {
+			log.Printf("Failed to close AMQP channel: %v", err)
+		} else {
+			log.Println("AMQP channel closed successfully")
+		}
+	}(ch)
+
+	if err := ch.ExchangeDeclare(
+		messaging.ExchangeName,
+		"direct",
+		true, // durable
+		false, false, false,
+		nil,
+	); err != nil {
+		return fmt.Errorf("exchange declare error: %w", err)
+	}
+
+	_, err = ch.QueueDeclare(
+		messaging.SubscribeQueueName,
+		true, false, false, false,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("queue declare error: %w", err)
+	}
+
+	if err := ch.QueueBind(
+		messaging.SubscribeQueueName,
+		messaging.SubscribeRoutingKey,
+		messaging.ExchangeName,
+		false,
+		nil,
+	); err != nil {
+		return fmt.Errorf("queue bind error: %w", err)
+	}
+
+	log.Println("✅ Queue and binding ensured manually via amqp091")
+	return nil
 }
