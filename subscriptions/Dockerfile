@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY subscriptions ./subscriptions
 COPY protos ./protos
+COPY pkg ./pkg
 
 WORKDIR /app/subscriptions
 

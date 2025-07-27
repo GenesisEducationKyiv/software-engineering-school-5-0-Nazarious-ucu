@@ -10,6 +10,7 @@ services:
       - .env
     networks:
       - default
+      - redis
 
   sub:
     build:
@@ -26,6 +27,8 @@ services:
       - ./subscriptions.db:/app/subscriptions.db
     depends_on:
       - weather
+      - notification
+      - rabbitmq
 
   gateway:
     build:
@@ -40,6 +43,17 @@ services:
     depends_on:
       - sub
       - weather
+
+  notification:
+    build:
+      context: .
+      dockerfile: ./notification/Dockerfile
+    platform: linux/amd64
+    restart: on-failure
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
 
   redis:
     image: redis:7-alpine
@@ -108,4 +122,3 @@ networks:
     prometheus:
         driver: bridge
         external: true
-
