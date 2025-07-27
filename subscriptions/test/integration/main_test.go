@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/messaging"
+
 	"github.com/wagslane/go-rabbitmq"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/app"
@@ -77,6 +79,25 @@ func TestMain(m *testing.M) {
 		log.Panicf("failed to connect to RabbitMQ: %v", err)
 	}
 
+	rabbitmqConsumer, err := rabbitmq.NewConsumer(
+		rmqConn,
+		messaging.SubscribeQueueName,
+		rabbitmq.WithConsumerOptionsExchangeName(messaging.ExchangeName),
+		rabbitmq.WithConsumerOptionsExchangeDeclare,
+		rabbitmq.WithConsumerOptionsExchangeDurable,
+		rabbitmq.WithConsumerOptionsRoutingKey(messaging.SubscribeRoutingKey),
+		rabbitmq.WithConsumerOptionsQueueDurable,
+		rabbitmq.WithConsumerOptionsConsumerName("pre-test-binding"),
+	)
+	if err != nil {
+		log.Panicf("failed to bind queue before tests: %v", err)
+	}
+	log.Println("RabbitMQ consumer started")
+	defer func() {
+		log.Println("RabbitMQ consumer stopped")
+		rabbitmqConsumer.Close()
+	}()
+
 	initIntegration("http://"+cfg.ServerAddress(), database)
 	time.Sleep(100 * time.Millisecond)
 
@@ -135,7 +156,7 @@ func saveSubscription(t *testing.T, email, city string, freq string, token strin
 func readLatestRabbitMQMessage(consumer *rabbitmq.Consumer, queue string) ([]byte, error) {
 	var body []byte
 	read := make(chan struct{})
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	go func() {

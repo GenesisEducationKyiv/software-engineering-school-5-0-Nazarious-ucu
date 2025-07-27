@@ -23,11 +23,14 @@ func NewProducer(prod *rabbitmq.Publisher, logger *log.Logger) *Producer {
 }
 
 func (p *Producer) Publish(ctx context.Context, routingKey []string, body []byte) error {
-	if err := p.prod.Publish(
+	if err := p.prod.PublishWithContext(
+		ctx,
 		body,
 		routingKey,
 		rabbitmq.WithPublishOptionsContentType("application/json"),
 		rabbitmq.WithPublishOptionsMandatory,
+		rabbitmq.WithPublishOptionsPersistentDelivery,
+		rabbitmq.WithPublishOptionsExchange(messaging.ExchangeName),
 	); err != nil {
 		p.log.Printf("Failed to publish message: %v", err)
 		return err

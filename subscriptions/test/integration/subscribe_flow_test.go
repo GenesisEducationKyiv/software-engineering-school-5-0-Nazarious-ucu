@@ -8,9 +8,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/pkg/messaging"
 	"github.com/stretchr/testify/assert"
@@ -84,7 +84,6 @@ func TestPostSubscribe(t *testing.T) {
 
 			resp, err := http.DefaultClient.Do(req)
 			assert.NoError(t, err)
-			time.Sleep(5000 * time.Millisecond)
 
 			defer func(body io.ReadCloser) {
 				err := body.Close()
@@ -116,21 +115,28 @@ func TestPostSubscribe(t *testing.T) {
 			assert.Equal(t, tc.wantDataInDatabase["Count"], subscription["Count"], "Expected Count to match")
 
 			// check if the new subscription was sent to the RabbitMQ queue
-			msg, err := readLatestRabbitMQMessage(consumer, messaging.SubscribeQueueName)
-			require.NoError(t, err, "Failed to read message from RabbitMQ queue")
+			if tc.wantCode == http.StatusOK {
+				msg, err := readLatestRabbitMQMessage(consumer, messaging.SubscribeQueueName)
+				require.NoError(t, err, "Failed to read message from RabbitMQ queue")
 
-			require.NotNil(t, msg, "Expected a message in the RabbitMQ queue")
-			var event messaging.NewSubscriptionEvent
-			err = json.Unmarshal(msg, &event)
-			require.NoError(t, err, "Failed to unmarshal RabbitMQ message")
-			assert.Equal(t,
-				tc.wantDataInDatabase["email"],
-				event.Email,
-				"Expected email to match in RabbitMQ message")
-			assert.Equal(t,
-				tc.wantDataInDatabase["token"],
-				event.Token,
-				"Expected city to match in RabbitMQ message")
+				require.NotNil(t, msg, "Expected a message in the RabbitMQ queue")
+				var event messaging.NewSubscriptionEvent
+				err = json.Unmarshal(msg, &event)
+				require.NoError(t, err, "Failed to unmarshal RabbitMQ message")
+				assert.Equal(t,
+					tc.wantDataInDatabase["email"],
+					event.Email,
+					"Expected email to match in RabbitMQ message")
+				require.Len(t, event.Token, 32)
+
+				matched, err := regexp.MatchString("^[a-f0-9]+$", event.Token)
+				require.NoError(t, err)
+				assert.True(t, matched, "token must be hex string")
+			} else {
+				// If the subscription already exists, we expect no message in the queue
+				_, err := readLatestRabbitMQMessage(consumer, messaging.SubscribeQueueName)
+				require.Error(t, err, "timeout waiting for message from queue")
+			}
 		},
 		)
 	}
