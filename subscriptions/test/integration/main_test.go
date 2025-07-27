@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/wagslane/go-rabbitmq"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/config"
 
@@ -19,6 +21,7 @@ import (
 var (
 	testServerURL string
 	db            *sql.DB
+	rmqConn       *rabbitmq.Conn
 )
 
 func TestMain(m *testing.M) {
@@ -29,9 +32,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Panicf("failed to load configuration: %v", err)
 	}
-
-	cfg.Email.Host = "localhost"
-	cfg.Email.Port = "1025"
 
 	cfg.DB.Source = "test.db"
 	cfg.DB.MigrationsPath = "../../migrations"
@@ -70,6 +70,13 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
+	rmqConn, err = rabbitmq.NewConn(
+		cfg.RabbitMQ.Address(),
+	)
+	if err != nil {
+		log.Panicf("failed to connect to RabbitMQ: %v", err)
+	}
+
 	initIntegration("http://"+cfg.ServerAddress(), database)
 	time.Sleep(100 * time.Millisecond)
 
@@ -77,7 +84,6 @@ func TestMain(m *testing.M) {
 	_ = m.Run()
 
 	cancel()
-	// os.Exit(code)
 }
 
 func resetTables(db *sql.DB) error {
@@ -124,4 +130,29 @@ func saveSubscription(t *testing.T, email, city string, freq string, token strin
 		email, city, freq, token,
 	)
 	assert.NoErrorf(t, err, "failed to save subscription: %v", err)
+}
+
+func readLatestRabbitMQMessage(consumer *rabbitmq.Consumer, queue string) ([]byte, error) {
+	var body []byte
+	read := make(chan struct{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	go func() {
+		err := consumer.Run(func(d rabbitmq.Delivery) rabbitmq.Action {
+			body = d.Body
+			close(read)
+			return rabbitmq.Ack
+		})
+		if err != nil {
+			log.Printf("Consumer run error: %v", err)
+		}
+	}()
+
+	select {
+	case <-read:
+		return body, nil
+	case <-ctx.Done():
+		return nil, fmt.Errorf("timeout waiting for message from queue %s", queue)
+	}
 }

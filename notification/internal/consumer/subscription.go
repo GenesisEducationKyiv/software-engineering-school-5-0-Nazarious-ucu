@@ -49,7 +49,7 @@ func (c *Consumer) ReceiveWeather(d rabbitmq.Delivery) rabbitmq.Action {
 	var weatherData models.WeatherData
 	var event messaging.WeatherNotifyEvent
 	if err := json.Unmarshal(d.Body, &event); err != nil {
-		log.Printf("❌ Failed to unmarshal message: %v", err)
+		log.Printf("Failed to unmarshal message: %v", err)
 		return rabbitmq.NackDiscard
 	}
 

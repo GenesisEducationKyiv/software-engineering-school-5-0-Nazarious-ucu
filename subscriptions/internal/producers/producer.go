@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"strings"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/pkg/messaging"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/models"
@@ -24,8 +23,7 @@ func NewProducer(prod *rabbitmq.Publisher, logger *log.Logger) *Producer {
 }
 
 func (p *Producer) Publish(ctx context.Context, routingKey []string, body []byte) error {
-	if err := p.prod.PublishWithContext(
-		ctx,
+	if err := p.prod.Publish(
 		body,
 		routingKey,
 		rabbitmq.WithPublishOptionsContentType("application/json"),
@@ -35,10 +33,6 @@ func (p *Producer) Publish(ctx context.Context, routingKey []string, body []byte
 		return err
 	}
 	p.log.Printf("Message published with routing key %s", routingKey)
-
-	p.prod.NotifyReturn(func(r rabbitmq.Return) {
-		log.Printf("message returned from server: %s", string(r.Body))
-	})
 	return nil
 }
 
@@ -62,7 +56,7 @@ func (p *Producer) SendWeather(
 		return err
 	}
 
-	return p.Publish(ctx, strings.Split(messaging.WeatherRoutingKey, ""), body)
+	return p.Publish(ctx, []string{messaging.WeatherRoutingKey}, body)
 }
 
 func (p *Producer) SendConfirmation(
@@ -81,5 +75,5 @@ func (p *Producer) SendConfirmation(
 		return err
 	}
 
-	return p.Publish(ctx, strings.Split(messaging.SubscribeRoutingKey, ""), body)
+	return p.Publish(ctx, []string{messaging.SubscribeRoutingKey}, body)
 }
