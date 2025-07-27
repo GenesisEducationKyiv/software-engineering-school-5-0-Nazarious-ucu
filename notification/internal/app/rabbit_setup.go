@@ -25,6 +25,7 @@ func (a *App) setupSubscribeEventConsumer(conn *rabbitmq.Conn) (*rabbitmq.Consum
 		messaging.SubscribeQueueName,
 		rabbitmq.WithConsumerOptionsExchangeName(messaging.ExchangeName),
 		rabbitmq.WithConsumerOptionsExchangeDeclare,
+		rabbitmq.WithConsumerOptionsExchangeDurable,
 		rabbitmq.WithConsumerOptionsRoutingKey(messaging.SubscribeRoutingKey),
 		rabbitmq.WithConsumerOptionsQueueDurable,
 	)
@@ -41,6 +42,7 @@ func (a *App) setupWeatherConsumer(conn *rabbitmq.Conn) (*rabbitmq.Consumer, err
 		messaging.WeatherQueueName,
 		rabbitmq.WithConsumerOptionsExchangeName(messaging.ExchangeName),
 		rabbitmq.WithConsumerOptionsExchangeDeclare,
+		rabbitmq.WithConsumerOptionsExchangeDurable,
 		rabbitmq.WithConsumerOptionsRoutingKey(messaging.WeatherRoutingKey),
 		rabbitmq.WithConsumerOptionsQueueDurable,
 	)

@@ -28,7 +28,7 @@ func NewConsumer(emailSender emailSender, logger *log.Logger) *Consumer {
 }
 
 func (c *Consumer) ReceiveSubscription(d rabbitmq.Delivery) rabbitmq.Action {
-	c.logger.Printf("Sending subscription confirmation: %s", string(d.Body))
+	c.logger.Printf("Received subscription confirmation: %s", string(d.Body))
 
 	var event messaging.NewSubscriptionEvent
 	if err := json.Unmarshal(d.Body, &event); err != nil {
@@ -45,13 +45,16 @@ func (c *Consumer) ReceiveSubscription(d rabbitmq.Delivery) rabbitmq.Action {
 }
 
 func (c *Consumer) ReceiveWeather(d rabbitmq.Delivery) rabbitmq.Action {
-	c.logger.Printf("Sending weather data: %s", string(d.Body))
+	c.logger.Printf("Received weather data: %s", string(d.Body))
 	var weatherData models.WeatherData
 	var event messaging.WeatherNotifyEvent
 	if err := json.Unmarshal(d.Body, &event); err != nil {
 		log.Printf("Failed to unmarshal message: %v", err)
 		return rabbitmq.NackDiscard
 	}
+	weatherData.Temperature = event.Weather.Temperature
+	weatherData.Condition = event.Weather.Description
+	weatherData.City = event.Weather.City
 
 	if err := c.emailSender.SendWeather(event.Email, weatherData); err != nil {
 		c.logger.Printf("Error sending weather email: %v", err)

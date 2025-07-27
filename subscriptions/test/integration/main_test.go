@@ -219,6 +219,6 @@ func forceDeclareRabbitQueue(amqpURL string) error {
 		return fmt.Errorf("queue bind error: %w", err)
 	}
 
-	log.Println("✅ Queue and binding ensured manually via amqp091")
+	log.Println("Queue and binding ensured manually via amqp091")
 	return nil
 }

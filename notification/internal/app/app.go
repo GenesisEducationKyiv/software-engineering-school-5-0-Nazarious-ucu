@@ -41,13 +41,6 @@ func (a *App) Start(ctx context.Context) error {
 		return err
 	}
 
-	weatherEventConsumer, err := a.setupWeatherConsumer(rabbitConn)
-	if err != nil {
-		a.log.Fatalf("Failed to setup weather consumer: %v", err)
-		return err
-	}
-	defer weatherEventConsumer.Close()
-
 	subscribeEventConsumer, err := a.setupSubscribeEventConsumer(rabbitConn)
 	if err != nil {
 		a.log.Fatalf("Failed to setup subscribe event consumer: %v", err)
@@ -55,19 +48,28 @@ func (a *App) Start(ctx context.Context) error {
 	}
 	defer subscribeEventConsumer.Close()
 
-	customConsumer := consumer.NewConsumer(emailService, a.log)
-
-	err = weatherEventConsumer.Run(customConsumer.ReceiveWeather)
+	weatherEventConsumer, err := a.setupWeatherConsumer(rabbitConn)
 	if err != nil {
-		a.log.Fatalf("Failed to run weather event consumer: %v", err)
+		a.log.Fatalf("Failed to setup weather consumer: %v", err)
 		return err
 	}
+	defer weatherEventConsumer.Close()
 
-	err = subscribeEventConsumer.Run(customConsumer.ReceiveSubscription)
-	if err != nil {
-		a.log.Fatalf("Failed to run subscribe event consumer: %v", err)
-	}
+	customConsumer := consumer.NewConsumer(emailService, a.log)
+	go func() {
+		// defer wg.Done()
+		if err := weatherEventConsumer.Run(customConsumer.ReceiveWeather); err != nil {
+			a.log.Printf("weather consumer stopped: %v", err)
+		}
+	}()
 
+	// 4) Launch subscribe consumer
+	go func() {
+		// defer wg.Done()
+		if err := subscribeEventConsumer.Run(customConsumer.ReceiveSubscription); err != nil {
+			a.log.Printf("subscribe consumer stopped: %v", err)
+		}
+	}()
 	a.log.Println("Application started successfully ")
 
 	<-ctx.Done()

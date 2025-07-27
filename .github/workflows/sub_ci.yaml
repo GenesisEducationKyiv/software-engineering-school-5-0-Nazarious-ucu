@@ -1,4 +1,4 @@
-name: monolith-CI
+name: subscription-CI
 
 on:
   push:

@@ -1,8 +1,6 @@
 package app
 
 import (
-	"log"
-
 	"github.com/Nazarious-ucu/weather-subscription-api/pkg/messaging"
 	"github.com/wagslane/go-rabbitmq"
 )
@@ -35,7 +33,7 @@ func (a *App) setupPublisher(conn *rabbitmq.Conn) (*rabbitmq.Publisher, error) {
 	}
 
 	publisher.NotifyReturn(func(r rabbitmq.Return) {
-		log.Printf("message returned from server: %s", string(r.Body))
+		a.log.Printf("message returned from server: %s", string(r.Body))
 		if r.ReplyCode != 0 {
 			a.log.Printf("Message returned with reply code %d: %s", r.ReplyCode, r.RoutingKey)
 		}
