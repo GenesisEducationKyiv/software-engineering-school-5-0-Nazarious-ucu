@@ -11,7 +11,7 @@ func (a *App) setupConn() (*rabbitmq.Conn, error) {
 		rabbitmq.WithConnectionOptionsLogging,
 	)
 	if err != nil {
-		a.log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+		a.log.Printf("Failed to connect to RabbitMQ: %v", err)
 		return nil, err
 	}
 

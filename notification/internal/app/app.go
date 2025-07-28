@@ -37,20 +37,20 @@ func (a *App) Start(ctx context.Context) error {
 
 	rabbitConn, err := a.setupConn()
 	if err != nil {
-		a.log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+		a.log.Printf("Failed to connect to RabbitMQ: %v", err)
 		return err
 	}
 
 	subscribeEventConsumer, err := a.setupSubscribeEventConsumer(rabbitConn)
 	if err != nil {
-		a.log.Fatalf("Failed to setup subscribe event consumer: %v", err)
+		a.log.Printf("Failed to setup subscribe event consumer: %v", err)
 		return err
 	}
 	defer subscribeEventConsumer.Close()
 
 	weatherEventConsumer, err := a.setupWeatherConsumer(rabbitConn)
 	if err != nil {
-		a.log.Fatalf("Failed to setup weather consumer: %v", err)
+		a.log.Printf("Failed to setup weather consumer: %v", err)
 		return err
 	}
 	defer weatherEventConsumer.Close()

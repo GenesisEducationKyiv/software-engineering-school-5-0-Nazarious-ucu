@@ -40,12 +40,10 @@ func (a *App) Start(ctx context.Context) error {
 	}
 	if err := subs.RegisterSubscriptionServiceHandlerFromEndpoint(
 		ctx, mux, a.cfg.SubServer.Address(), opts); err != nil {
-		a.log.Fatalf("failed to register subscription gateway: %v", err)
 		return err
 	}
 	if err := weather.RegisterWeatherServiceHandlerFromEndpoint(
 		ctx, mux, a.cfg.WeatherServer.Address(), opts); err != nil {
-		a.log.Fatalf("failed to register weather gateway: %v", err)
 		return err
 	}
 
@@ -78,7 +76,7 @@ func (a *App) Start(ctx context.Context) error {
 		a.log.Printf("Gateway listening on %s", a.cfg.ServerAddress())
 		// a.log.Printf("endpoints: %s", apiServer.)apiServer
 		if err := apiServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			a.log.Fatalf("server error: %v", err)
+			a.log.Printf("server error: %v", err)
 		}
 	}()
 
@@ -91,7 +89,7 @@ func (a *App) Start(ctx context.Context) error {
 	defer cancel()
 
 	if err := apiServer.Shutdown(shutdownCtx); err != nil {
-		a.log.Fatalf("server forced to shutdown: %v", err)
+		a.log.Printf("server forced to shutdown: %v", err)
 	}
 
 	a.log.Println("Gateway exited properly")

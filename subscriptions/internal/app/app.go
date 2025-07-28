@@ -102,7 +102,8 @@ func (a *App) Start(ctx context.Context) error {
 	<-ctx.Done()
 
 	if err := a.Stop(srvContainer); err != nil {
-		a.log.Panicf("failed to shutdown application: %v", err)
+		a.log.Printf("failed to shutdown application: %v", err)
+		return err
 	}
 	a.log.Println("Application shutdown successfully")
 	return nil
@@ -153,11 +154,11 @@ func (a *App) init() ServiceContainer {
 
 	db, err := CreateSqliteDb(ctx, a.cfg.DB.Dialect, a.cfg.DB.Source)
 	if err != nil {
-		a.log.Panic(err)
+		a.log.Println(err)
 	}
 
 	if err := InitSqliteDb(db, a.cfg.DB.Dialect, a.cfg.DB.MigrationsPath); err != nil {
-		a.log.Panic(err)
+		a.log.Println(err)
 	}
 
 	router := gin.Default()
@@ -174,12 +175,12 @@ func (a *App) init() ServiceContainer {
 
 	rabbitConn, err := a.setupConn()
 	if err != nil {
-		a.log.Panicf("Failed to connect to RabbitMQ: %v", err)
+		a.log.Printf("Failed to connect to RabbitMQ: %v", err)
 	}
 
 	publisher, err := a.setupPublisher(rabbitConn)
 	if err != nil {
-		a.log.Panicf("Failed to create RabbitMQ publisher: %v", err)
+		a.log.Printf("Failed to create RabbitMQ publisher: %v", err)
 	}
 
 	emailProducer := producers.NewProducer(publisher, a.log)
@@ -191,7 +192,7 @@ func (a *App) init() ServiceContainer {
 		"tcp",
 		a.cfg.Server.Host+":"+a.cfg.Server.GrpcPort)
 	if err != nil {
-		a.log.Panic(err)
+		a.log.Println(err)
 	}
 	grpcServer := grpc.NewServer()
 
@@ -199,7 +200,7 @@ func (a *App) init() ServiceContainer {
 	grpcClient, err := grpc.NewClient(a.cfg.WeatherRPCAddr+a.cfg.WeatherRPCPort, opt)
 
 	if err != nil {
-		a.log.Panicf("failed to create gRPC client: %v", err)
+		a.log.Printf("failed to create gRPC client: %v", err)
 	} else {
 		a.log.Printf(
 			"gRPC client created successfully for address: %s",
@@ -216,7 +217,7 @@ func (a *App) init() ServiceContainer {
 	go func() {
 		log.Println("gRPC server running at :50051")
 		if err := grpcServer.Serve(lis); err != nil {
-			a.log.Panicf("gRPC server failed: %v", err)
+			a.log.Printf("gRPC server failed: %v", err)
 		}
 	}()
 
