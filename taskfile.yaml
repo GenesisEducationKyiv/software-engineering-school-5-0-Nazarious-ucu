@@ -110,4 +110,5 @@ tasks:
     cmds:
       - task: subscriptions:test:integration
       - task: weather:test:integration
+      - task: notification:test:integration
 
