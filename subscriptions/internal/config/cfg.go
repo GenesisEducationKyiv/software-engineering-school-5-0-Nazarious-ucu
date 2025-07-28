@@ -39,8 +39,6 @@ type Config struct {
 	Server       Server
 	DB           Db
 	NotifierFreq NotifierFrequency
-
-	TemplatesDir string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
 }
 
 func NewConfig() (*Config, error) {
