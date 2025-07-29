@@ -6,7 +6,7 @@ import (
 	"html/template"
 	"strconv"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/models"
+	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/models"
 )
 
 type Emailer interface {

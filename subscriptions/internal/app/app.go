@@ -7,20 +7,17 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/producers"
 
 	grpc2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/grpc"
 	http2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/http"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/config"
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/emailer"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/models"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/notifier"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/repository/sqlite"
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/services/email"
 	subs2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/services/subscriptions"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/services/weather"
 
@@ -50,7 +47,7 @@ type weatherGetterService interface {
 type ServiceContainer struct {
 	WeatherService      weatherGetterService
 	SubscriptionService *subs2.Service
-	EmailService        *email.Service
+	EmailProducer       *producers.Producer
 	Notificator         *notifier.Notifier
 	SubRepository       sqlite.SubscriptionRepository
 	GrpcServer          *grpc.Server
@@ -105,7 +102,8 @@ func (a *App) Start(ctx context.Context) error {
 	<-ctx.Done()
 
 	if err := a.Stop(srvContainer); err != nil {
-		a.log.Panicf("failed to shutdown application: %v", err)
+		a.log.Printf("failed to shutdown application: %v", err)
+		return err
 	}
 	a.log.Println("Application shutdown successfully")
 	return nil
@@ -125,10 +123,6 @@ func (a *App) Stop(srvContainer ServiceContainer) error {
 
 	srvContainer.Notificator.Stop()
 	a.log.Println("Notifier stopped")
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
 
 	log.Println("Shutting down gRPC server...")
 	srvContainer.GrpcServer.GracefulStop()
@@ -160,11 +154,11 @@ func (a *App) init() ServiceContainer {
 
 	db, err := CreateSqliteDb(ctx, a.cfg.DB.Dialect, a.cfg.DB.Source)
 	if err != nil {
-		a.log.Panic(err)
+		a.log.Println(err)
 	}
 
 	if err := InitSqliteDb(db, a.cfg.DB.Dialect, a.cfg.DB.MigrationsPath); err != nil {
-		a.log.Panic(err)
+		a.log.Println(err)
 	}
 
 	router := gin.Default()
@@ -177,19 +171,28 @@ func (a *App) init() ServiceContainer {
 
 	a.log.Printf("Application initialized on address: %s", apiServer.Addr)
 
-	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
-	a.log.Printf("Initializing SMTP service with config: %+v\n", a.cfg.Email)
 	subRepository := sqlite.NewSubscriptionRepository(db, a.log)
-	emailService := email.NewService(smtpService, a.cfg.TemplatesDir)
 
-	subService := subs2.NewService(subRepository, emailService)
+	rabbitConn, err := a.setupConn()
+	if err != nil {
+		a.log.Printf("Failed to connect to RabbitMQ: %v", err)
+	}
+
+	publisher, err := a.setupPublisher(rabbitConn)
+	if err != nil {
+		a.log.Printf("Failed to create RabbitMQ publisher: %v", err)
+	}
+
+	emailProducer := producers.NewProducer(publisher, a.log)
+
+	subService := subs2.NewService(subRepository, emailProducer)
 
 	lc := net.ListenConfig{}
 	lis, err := lc.Listen(ctx,
 		"tcp",
 		a.cfg.Server.Host+":"+a.cfg.Server.GrpcPort)
 	if err != nil {
-		a.log.Panic(err)
+		a.log.Println(err)
 	}
 	grpcServer := grpc.NewServer()
 
@@ -197,7 +200,7 @@ func (a *App) init() ServiceContainer {
 	grpcClient, err := grpc.NewClient(a.cfg.WeatherRPCAddr+a.cfg.WeatherRPCPort, opt)
 
 	if err != nil {
-		a.log.Panicf("failed to create gRPC client: %v", err)
+		a.log.Printf("failed to create gRPC client: %v", err)
 	} else {
 		a.log.Printf(
 			"gRPC client created successfully for address: %s",
@@ -214,13 +217,13 @@ func (a *App) init() ServiceContainer {
 	go func() {
 		log.Println("gRPC server running at :50051")
 		if err := grpcServer.Serve(lis); err != nil {
-			a.log.Panicf("gRPC server failed: %v", err)
+			a.log.Printf("gRPC server failed: %v", err)
 		}
 	}()
 
 	notificator := notifier.New(subRepository,
 		weatherAdapter,
-		emailService,
+		emailProducer,
 		a.log,
 		a.cfg.NotifierFreq.HourlyFrequency,
 		a.cfg.NotifierFreq.DailyFrequency,
@@ -229,7 +232,6 @@ func (a *App) init() ServiceContainer {
 	srvContainer := ServiceContainer{
 		WeatherService:      *weatherAdapter,
 		SubscriptionService: subService,
-		EmailService:        emailService,
 		SubRepository:       *subRepository,
 		Notificator:         notificator,
 		GrpcServer:          grpcServer,

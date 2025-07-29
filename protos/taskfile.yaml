@@ -2,13 +2,13 @@ version: "3"
 
 tasks:
   generate:
-    desc: Генерує gRPC + Gateway + Swagger
+    desc: Generate protobuf and swagger files
     deps: [install:deps]
     cmds:
       - buf generate
 
   install:deps:
-    desc: Оновлює залежності buf
+    desc: Update dependencies
     cmds:
       - buf dep update
 

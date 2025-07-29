@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -11,12 +13,11 @@ type Server struct {
 	ReadTimeout int    `envconfig:"SUB_SERVER_TIMEOUT" default:"10"`
 }
 
-type Email struct {
-	User     string `envconfig:"EMAIL_USER"     required:"true"`
-	Host     string `envconfig:"EMAIL_HOST"     required:"true"`
-	Port     string `envconfig:"EMAIL_PORT"     required:"true"`
-	Password string `envconfig:"EMAIL_PASSWORD" required:"true"`
-	From     string `envconfig:"EMAIL_FROM"     required:"true"`
+type RabbitMQ struct {
+	Host string `envconfig:"RABBITMQ_HOST" required:"true"`
+	Port string `envconfig:"RABBITMQ_PORT" required:"true"`
+	User string `envconfig:"RABBITMQ_USER" required:"true"`
+	Pass string `envconfig:"RABBITMQ_PASSWORD" required:"true"`
 }
 
 type Db struct {
@@ -31,24 +32,13 @@ type NotifierFrequency struct {
 }
 
 type Config struct {
-	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
-	WeatherAPIURL string `envconfig:"WEATHER_API_URL" required:"true"`
-
-	OpenWeatherMapAPIKey string `envconfig:"OPEN_WEATHER_MAP_API_KEY" required:"true"`
-	OpenWeatherMapURL    string `envconfig:"OPEN_WEATHER_MAP_URL" required:"true"`
-
-	WeatherBitAPIKey string `envconfig:"WEATHER_BIT_API_KEY" required:"true"`
-	WeatherBitURL    string `envconfig:"WEATHER_BIT_URL" required:"true"`
-
 	WeatherRPCAddr string `envconfig:"WEATHER_SERVER_ADDR" default:"localhost"`
 	WeatherRPCPort string `envconfig:"WEATHER_SERVER_PORT" default:":8082"`
 
+	RabbitMQ     RabbitMQ
 	Server       Server
-	Email        Email
 	DB           Db
 	NotifierFreq NotifierFrequency
-
-	TemplatesDir string `envconfig:"TEMPLATES_DIR"    default:"../../internal/templates"`
 }
 
 func NewConfig() (*Config, error) {
@@ -61,4 +51,8 @@ func NewConfig() (*Config, error) {
 
 func (c *Config) ServerAddress() string {
 	return c.Server.Host + ":" + c.Server.HTTPPort
+}
+
+func (r *RabbitMQ) Address() string {
+	return fmt.Sprintf("amqp://%s:%s@%s:%s/", r.User, r.Pass, r.Host, r.Port)
 }

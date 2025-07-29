@@ -1,4 +1,4 @@
-name: subscription-CI
+name: notifier-CI
 
 on:
   push:
@@ -21,26 +21,7 @@ jobs:
 
 
       - name: Run Linter
-        run: task subscriptions:lint
-
-
-  migrate-test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up env
-        uses: ./.github/actions/setup
-        with:
-          go-version-file: 'subscriptions/go.mod'
-          install-goose: 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run DB migrations
-        run: task subscriptions:migrations-up
+        run: task notification:lint
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -57,7 +38,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Unit Tests
-        run: task subscriptions:test:unit
+        run: task notification:test:unit
 
   integration-tests:
     runs-on: ubuntu-latest
@@ -75,4 +56,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Integration Tests
-        run: task subscriptions:test:integration
+        run: task notification:test:integration

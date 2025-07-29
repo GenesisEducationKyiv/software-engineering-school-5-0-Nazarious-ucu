@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/smtp"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/config"
+	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/config"
 )
 
 type SMTPService struct {

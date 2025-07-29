@@ -58,8 +58,8 @@ type mockEmail struct {
 	mock.Mock
 }
 
-func (m *mockEmail) SendWeather(to string, forecast models.WeatherData) error {
-	args := m.Called(to, forecast)
+func (m *mockEmail) SendWeather(ctx context.Context, to string, forecast models.WeatherData) error {
+	args := m.Called(ctx, to, forecast)
 	return args.Error(0)
 }
 
@@ -78,7 +78,7 @@ func Test_sendOne_Success(t *testing.T) {
 
 	forecast := models.WeatherData{City: city, Temperature: 5.0, Condition: "Sunny"}
 	mockW.On("GetByCity", mock.Anything, city).Return(forecast, nil)
-	mockE.On("SendWeather", email, forecast).Return(nil)
+	mockE.On("SendWeather", mock.Anything, email, forecast).Return(nil)
 
 	t.Cleanup(func() {
 		mockR.AssertExpectations(t)
@@ -124,7 +124,7 @@ func Test_sendOne_Error_EmailError(t *testing.T) {
 	em := &mockEmail{}
 
 	wm.On("GetByCity", mock.Anything, city).Return(models.WeatherData{City: city}, nil)
-	em.On("SendWeather", sub.Email, mock.Anything).Return(errors.New("smtp fail"))
+	em.On("SendWeather", mock.Anything, sub.Email, mock.Anything).Return(errors.New("smtp fail"))
 
 	t.Cleanup(func() {
 		rm.AssertExpectations(t)
@@ -155,8 +155,8 @@ func Test_runDue_Success(t *testing.T) {
 	wm.On("GetByCity", mock.Anything, city2).Return(models.WeatherData{City: city2}, nil)
 
 	// email sends
-	em.On("SendWeather", "a", mock.Anything).Return(nil)
-	em.On("SendWeather", "b", mock.Anything).Return(nil)
+	em.On("SendWeather", mock.Anything, "a", mock.Anything).Return(nil)
+	em.On("SendWeather", mock.Anything, "b", mock.Anything).Return(nil)
 
 	t.Cleanup(func() {
 		rm.AssertExpectations(t)

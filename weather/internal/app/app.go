@@ -65,7 +65,8 @@ func (a *App) Start(ctx context.Context) error {
 	<-ctx.Done()
 
 	if err := a.Shutdown(srvContainer); err != nil {
-		a.log.Panicf("failed to shutdown application: %v", err)
+		a.log.Printf("failed to shutdown application: %v", err)
+		return err
 	}
 	a.log.Println("Application shutdown successfully")
 
@@ -98,7 +99,7 @@ func (a *App) init(ctx context.Context) ServiceContainer {
 
 	fileLogger, err := fLogger.NewFileLogger(a.cfg.LogsPath)
 	if err != nil {
-		a.log.Panicf("failed to create file logger: %v", err)
+		a.log.Printf("failed to create file logger: %v", err)
 	}
 
 	loggerT := logger.NewRoundTripper(fileLogger)
@@ -169,7 +170,7 @@ func (a *App) init(ctx context.Context) ServiceContainer {
 	lc := net.ListenConfig{}
 	lis, err := lc.Listen(ctx, "tcp", addrGrpc)
 	if err != nil {
-		a.log.Panic(err)
+		a.log.Println(err)
 	}
 	grpcServer := grpc.NewServer()
 
@@ -180,7 +181,7 @@ func (a *App) init(ctx context.Context) ServiceContainer {
 	go func() {
 		log.Printf("gRPC server running at %s", addrGrpc)
 		if err := grpcServer.Serve(lis); err != nil {
-			a.log.Panicf("gRPC server failed: %v", err)
+			a.log.Printf("gRPC server failed: %v", err)
 		}
 	}()
 

@@ -11,7 +11,7 @@ import (
 const bytesNum = 16
 
 type ConfirmationEmailer interface {
-	SendConfirmation(email, token string) error
+	SendConfirmation(ctx context.Context, email, token string) error
 }
 
 type subscriptionRepository interface {
@@ -45,7 +45,7 @@ func (s *Service) Subscribe(ctx context.Context, data models.UserSubData) error 
 		return err
 	}
 
-	return s.emailer.SendConfirmation(data.Email, token)
+	return s.emailer.SendConfirmation(ctx, data.Email, token)
 }
 
 func (s *Service) Confirm(ctx context.Context, token string) (bool, error) {

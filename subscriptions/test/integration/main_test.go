@@ -10,6 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/messaging"
+
+	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/wagslane/go-rabbitmq"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/config"
 
@@ -19,6 +24,7 @@ import (
 var (
 	testServerURL string
 	db            *sql.DB
+	rmqConn       *rabbitmq.Conn
 )
 
 func TestMain(m *testing.M) {
@@ -29,9 +35,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Panicf("failed to load configuration: %v", err)
 	}
-
-	cfg.Email.Host = "localhost"
-	cfg.Email.Port = "1025"
 
 	cfg.DB.Source = "test.db"
 	cfg.DB.MigrationsPath = "../../migrations"
@@ -70,6 +73,16 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
+	rmqConn, err = rabbitmq.NewConn(
+		cfg.RabbitMQ.Address(),
+	)
+	if err != nil {
+		log.Panicf("failed to connect to RabbitMQ: %v", err)
+	}
+	if err := forceDeclareRabbitQueue(cfg.RabbitMQ.Address()); err != nil {
+		log.Panicf("failed to declare queue and binding manually: %v", err)
+	}
+
 	initIntegration("http://"+cfg.ServerAddress(), database)
 	time.Sleep(100 * time.Millisecond)
 
@@ -77,7 +90,6 @@ func TestMain(m *testing.M) {
 	_ = m.Run()
 
 	cancel()
-	// os.Exit(code)
 }
 
 func resetTables(db *sql.DB) error {
@@ -124,4 +136,89 @@ func saveSubscription(t *testing.T, email, city string, freq string, token strin
 		email, city, freq, token,
 	)
 	assert.NoErrorf(t, err, "failed to save subscription: %v", err)
+}
+
+func readLatestRabbitMQMessage(consumer *rabbitmq.Consumer, queue string) ([]byte, error) {
+	var body []byte
+	read := make(chan struct{})
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	go func() {
+		err := consumer.Run(func(d rabbitmq.Delivery) rabbitmq.Action {
+			body = d.Body
+			close(read)
+			return rabbitmq.Ack
+		})
+		if err != nil {
+			log.Printf("Consumer run error: %v", err)
+		}
+	}()
+
+	select {
+	case <-read:
+		return body, nil
+	case <-ctx.Done():
+		return nil, fmt.Errorf("timeout waiting for message from queue %s", queue)
+	}
+}
+
+func forceDeclareRabbitQueue(amqpURL string) error {
+	conn, err := amqp.Dial(amqpURL)
+	if err != nil {
+		return fmt.Errorf("amqp dial failed: %w", err)
+	}
+	defer func(conn *amqp.Connection) {
+		err := conn.Close()
+		if err != nil {
+			log.Printf("Failed to close AMQP connection: %v", err)
+		} else {
+			log.Println("AMQP connection closed successfully")
+		}
+	}(conn)
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return fmt.Errorf("amqp channel error: %w", err)
+	}
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		if err != nil {
+			log.Printf("Failed to close AMQP channel: %v", err)
+		} else {
+			log.Println("AMQP channel closed successfully")
+		}
+	}(ch)
+
+	if err := ch.ExchangeDeclare(
+		messaging.ExchangeName,
+		"direct",
+		true, // durable
+		false, false, false,
+		nil,
+	); err != nil {
+		return fmt.Errorf("exchange declare error: %w", err)
+	}
+
+	_, err = ch.QueueDeclare(
+		messaging.SubscribeQueueName,
+		true, false, false, false,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("queue declare error: %w", err)
+	}
+
+	if err := ch.QueueBind(
+		messaging.SubscribeQueueName,
+		messaging.SubscribeRoutingKey,
+		messaging.ExchangeName,
+		false,
+		nil,
+	); err != nil {
+		return fmt.Errorf("queue bind error: %w", err)
+	}
+
+	log.Println("Queue and binding ensured manually via amqp091")
+	return nil
 }

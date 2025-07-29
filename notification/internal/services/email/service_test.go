@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/models"
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/services/email"
+	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/models"
+	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/services/email"
 
 	"github.com/stretchr/testify/mock"
 
