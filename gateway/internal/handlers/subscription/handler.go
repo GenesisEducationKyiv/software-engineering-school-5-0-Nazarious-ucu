@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"net/http"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/models"
 )
@@ -20,11 +21,15 @@ var ErrSubscriptionExists = errors.New("subscription already exists")
 type Handler struct {
 	client *http.Client
 	subURL string
-	logger *log.Logger
+	logger *zap.SugaredLogger
 }
 
-func NewHandler(client *http.Client, subscribeURL string, logger *log.Logger) *Handler {
-	return &Handler{client: client, subURL: subscribeURL, logger: logger}
+func NewHandler(client *http.Client, subscribeURL string, logger *zap.SugaredLogger) *Handler {
+	return &Handler{
+		client: client,
+		subURL: subscribeURL,
+		logger: logger,
+	}
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
@@ -48,11 +53,13 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 // @Router /subscribe [post]
 func (h *Handler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		h.logger.Warnw("method not allowed", "method", r.Method, "path", r.URL.Path)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
+		h.logger.Errorw("failed to parse form", "error", err)
 		http.Error(w, "Failed to parse form", http.StatusBadRequest)
 		return
 	}
@@ -64,17 +71,23 @@ func (h *Handler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if userData.Email == "" || userData.City == "" || userData.Frequency == "" {
+		h.logger.Warn("missing required subscription fields", "data", userData)
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
 
-	h.logger.Printf("Received subscribe request: %+v", userData)
+	h.logger.Infow("received subscribe request",
+		"email", userData.Email,
+		"city", userData.City,
+		"frequency", userData.Frequency,
+	)
 
 	ctx, cancel := context.WithTimeout(r.Context(), timeoutDuration)
 	defer cancel()
 
-	jsonBytes, err := json.Marshal(userData)
+	payload, err := json.Marshal(userData)
 	if err != nil {
+		h.logger.Errorw("failed to marshal subscription payload", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -83,8 +96,9 @@ func (h *Handler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 		ctx,
 		http.MethodPost,
 		h.subURL+"/subscribe",
-		bytes.NewReader(jsonBytes))
+		bytes.NewReader(payload))
 	if err != nil {
+		h.logger.Errorw("failed to create backend request", "url", h.subURL+"/subscribe", "error", err)
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
 	}
@@ -92,24 +106,29 @@ func (h *Handler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.client.Do(req)
 	if err != nil {
+		h.logger.Errorw("error sending subscribe request to backend", "error", err)
 		http.Error(w, "Failed to send request", http.StatusInternalServerError)
 		return
 	}
 	defer func(body io.ReadCloser) {
 		err := body.Close()
 		if err != nil {
-			h.logger.Printf("Error closing response body: %v", err)
+			h.logger.Errorw(
+				"error closing response body", "error", err, "email", userData.Email, "city", userData.City)
 		}
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			h.logger.Printf("Failed to read response body: %s", err)
+			h.logger.Errorw("failed to read response body", "error", err, "status", resp.StatusCode)
 			http.Error(w, "Failed to read response", http.StatusInternalServerError)
 			return
 		}
-		h.logger.Printf("Subscription error: %s", string(bodyBytes))
+		h.logger.Errorw("backend subscription error",
+			"status", resp.StatusCode,
+			"body", string(body),
+		)
 
 		switch resp.StatusCode {
 		case http.StatusBadRequest:
@@ -123,15 +142,12 @@ func (h *Handler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	write, err := w.Write([]byte(`{"message":"Subscribed successfully"}`))
+	n, err := w.Write([]byte(`{"message":"Subscribed successfully"}`))
 	if err != nil {
-		h.logger.Printf("Failed to write response: %s", err)
+		h.logger.Errorw("failed to write subscribe response", "error", err)
 		return
 	}
-	if write == 0 {
-		h.logger.Println("No data written to response")
-		return
-	}
+	h.logger.Infow("subscription success", "bytes_written", n)
 }
 
 // Confirm
@@ -145,59 +161,62 @@ func (h *Handler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 // @Router /confirm/{token} [get]
 func (h *Handler) handleConfirm(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
+		h.logger.Warnw("method not allowed", "method", r.Method, "path", r.URL.Path)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	token := extractTokenFromPath(r.URL.Path, "/api/v1/http/subscriptions/confirm/")
 	if token == "" {
+		h.logger.Warn("confirm token not provided", "path", r.URL.Path)
 		http.Error(w, "Token not provided", http.StatusBadRequest)
 		return
 	}
+
+	h.logger.Infow("confirming subscription", "token", token)
 
 	ctx, cancel := context.WithTimeout(r.Context(), timeoutDuration)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.subURL+"/confirm/"+token, nil)
 	if err != nil {
+		h.logger.Errorw("failed to create confirm request", "error", err)
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
 	}
 
 	resp, err := h.client.Do(req)
 	if err != nil {
+		h.logger.Errorw("error sending confirm request to backend", "error", err)
 		http.Error(w, "Failed to send request", http.StatusInternalServerError)
 		return
 	}
 	defer func(body io.ReadCloser) {
 		err := body.Close()
 		if err != nil {
-			h.logger.Printf("Error closing response body: %v", err)
+			h.logger.Errorw("error closing response body", "error", err, "token", token)
 		}
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			h.logger.Printf("Failed to read response body: %s", err)
+			h.logger.Errorw("failed to read response body", "error", err, "status", resp.StatusCode)
 			http.Error(w, "Failed to read response", http.StatusInternalServerError)
 			return
 		}
-		h.logger.Printf("Confirm error: %s", string(bodyBytes))
+		h.logger.Errorw("backend confirm error", "status", resp.StatusCode, "body", string(body))
 		http.Error(w, "Failed to confirm subscription", resp.StatusCode)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	write, err := w.Write([]byte(`{"message":"Confirmed successfully"}`))
+	n, err := w.Write([]byte(`{"message":"Confirmed successfully"}`))
 	if err != nil {
-		h.logger.Printf("Failed to write response: %s", err)
+		h.logger.Errorw("failed to write confirm response", "error", err)
 		return
 	}
-	if write == 0 {
-		h.logger.Println("No data written to response")
-		return
-	}
+	h.logger.Infow("confirm success", "bytes_written", n)
 }
 
 // Unsubscribe
@@ -211,52 +230,56 @@ func (h *Handler) handleConfirm(w http.ResponseWriter, r *http.Request) {
 // @Router /unsubscribe/{token} [get]
 func (h *Handler) handleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
+		h.logger.Warnw("method not allowed", "method", r.Method, "path", r.URL.Path)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	token := extractTokenFromPath(r.URL.Path, "/api/v1/http/subscriptions/unsubscribe/")
 	if token == "" {
+		h.logger.Warn("unsubscribe token not provided", "path", r.URL.Path)
 		http.Error(w, "Token not provided", http.StatusBadRequest)
 		return
 	}
+
+	h.logger.Infow("unsubscribing token", "token", token)
 
 	ctx, cancel := context.WithTimeout(r.Context(), timeoutDuration)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.subURL+"/unsubscribe/"+token, nil)
 	if err != nil {
+		h.logger.Errorw("failed to create unsubscribe request", "error", err)
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
 	}
 
 	resp, err := h.client.Do(req)
 	if err != nil {
+		h.logger.Errorw("error sending unsubscribe request to backend", "error", err)
 		http.Error(w, "Failed to send request", http.StatusInternalServerError)
 		return
 	}
 	defer func(body io.ReadCloser) {
 		err := body.Close()
 		if err != nil {
-			h.logger.Printf("Error closing response body: %v", err)
+			h.logger.Errorw("error closing response body", "error", err, "token", token)
 		}
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
+		h.logger.Errorw("backend unsubscribe error", "status", resp.StatusCode)
 		http.Error(w, "Failed to unsubscribe", resp.StatusCode)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	write, err := w.Write([]byte(`{"message":"Unsubscribed successfully"}`))
+	n, err := w.Write([]byte(`{"message":"Unsubscribed successfully"}`))
 	if err != nil {
-		h.logger.Printf("Failed to write response: %s", err)
+		h.logger.Errorw("failed to write unsubscribe response", "error", err)
 		return
 	}
-	if write == 0 {
-		h.logger.Println("No data written to response")
-		return
-	}
+	h.logger.Infow("unsubscribe success", "bytes_written", n)
 }
 
 // extractTokenFromPath trims the prefix from the path and returns the token
