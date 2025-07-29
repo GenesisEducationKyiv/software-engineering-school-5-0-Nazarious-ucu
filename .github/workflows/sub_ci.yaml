@@ -1,0 +1,78 @@
+name: subscription-CI
+
+on:
+  push:
+    branches: ['*']
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up env
+        uses: ./.github/actions/setup
+        with:
+          go-version-file: 'subscriptions/go.mod'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Run Linter
+        run: task subscriptions:lint
+
+
+  migrate-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up env
+        uses: ./.github/actions/setup
+        with:
+          go-version-file: 'subscriptions/go.mod'
+          install-goose: 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run DB migrations
+        run: task subscriptions:migrations-up
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up env
+        uses: ./.github/actions/setup
+        with:
+          go-version-file: 'subscriptions/go.mod'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Unit Tests
+        run: task subscriptions:test:unit
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up env
+        uses: ./.github/actions/setup
+        with:
+          go-version-file: 'subscriptions/go.mod'
+          install-goose: 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Integration Tests
+        run: task subscriptions:test:integration

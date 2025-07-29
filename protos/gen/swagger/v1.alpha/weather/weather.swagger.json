@@ -1,0 +1,132 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "v1.alpha/weather/weather.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Weather",
+      "description": "Provides current weather information by city name."
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/weather": {
+      "get": {
+        "summary": "Get current weather",
+        "description": "Returns the current weather for a given city",
+        "operationId": "WeatherService_GetByCity",
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved weather data",
+            "schema": {
+              "$ref": "#/definitions/v1WeatherResponse"
+            },
+            "examples": {
+              "application/json": {
+                "city": "Lviv",
+                "temperature": 21.5,
+                "condition": "Sunny"
+              }
+            }
+          },
+          "400": {
+            "description": "Missing city query parameter",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "city query parameter is required"
+              }
+            }
+          },
+          "404": {
+            "description": "City not found",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "City not found"
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "unexpected error"
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "weather"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1WeatherResponse": {
+      "type": "object",
+      "properties": {
+        "city": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "number",
+          "format": "double"
+        },
+        "condition": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

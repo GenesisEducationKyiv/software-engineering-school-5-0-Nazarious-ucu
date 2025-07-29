@@ -1,0 +1,43 @@
+version: "3"
+
+tasks:
+  run:
+    desc: "Populate env from .env file and run service"
+    deps: [install:godotenv]
+    cmds:
+      - godotenv -f ../.env task run-with-env
+
+  lint:
+    desc: "Run golangci-lint"
+    deps:
+      - install:lint
+    preconditions:
+      - command -v golangci-lint
+    cmds:
+      - golangci-lint run --config <(curl -sSfL https://raw.githubusercontent.com/fabl3ss/genesis-se-school-linter/refs/heads/main/.golangci.yaml) --modules-download-mode=readonly
+
+  install:
+    desc: "Install all tools"
+    deps:
+      - install:lint
+      - install:godotenv
+
+  install:lint:
+    desc: "Install golangci-lint"
+    cmds:
+      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+    status:
+        - command -v golangci-lint
+
+  install:godotenv:
+    desc: "Install go dot env lib"
+    cmds:
+      - go install github.com/joho/godotenv/cmd/godotenv@latest
+    status:
+      - command godotenv
+
+  gen:swagger:
+    desc: "Generate swagger docs"
+    dir: ./main
+    cmds:
+      - swag init --parseDependency --parseInternal -g /main.go --output ../docs

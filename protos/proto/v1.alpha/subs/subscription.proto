@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package subscription.v1.alpha;
+
+option go_package = "github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/subs;subs";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+
+service SubscriptionService {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_tag) = {
+    name: "Subscription"
+    description: "Handles email subscriptions to weather updates by city with optional frequency."
+  };
+
+  rpc Subscribe(SubscribeRequest) returns (MessageResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/subscribe"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Subscribe to weather updates"
+      description: "Subscribe an email to receive weather updates for a specific city with a given frequency."
+      tags: ["subscription"]
+      responses: {
+        key: "200"
+        value: {
+          description: "Returned when subscription is successful"
+          examples: {
+            key: "application/json"
+            value: '{"message": "Subscribed successfully"}'
+          }
+        }
+      }
+      responses: {
+        key: "400"
+        value: {
+          description: "Missing or invalid input fields"
+          examples: {
+            key: "application/json"
+            value: '{"error": "Missing required fields"}'
+          }
+        }
+      }
+      responses: {
+        key: "500"
+        value: {
+          description: "Server error during subscription"
+          examples: {
+            key: "application/json"
+            value: '{"error": "Internal server error"}'
+          }
+        }
+      }
+    };
+  }
+
+  rpc Confirm(TokenRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      get: "/api/v1/confirm/{token}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Confirm subscription"
+      description: "Confirms the subscription using the token sent in the email."
+      tags: ["subscription"]
+      responses: {
+        key: "200"
+        value: { description: "Subscription confirmed successfully" }
+      }
+      responses: {
+        key: "400"
+        value: { description: "Invalid or expired token" }
+      }
+      responses: {
+        key: "500"
+        value: { description: "Internal server error" }
+      }
+    };
+  }
+
+  rpc Unsubscribe(TokenRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      get: "/api/v1/unsubscribe/{token}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Unsubscribe from weather updates"
+      description: "Unsubscribe an email from weather updates using a token."
+      tags: ["subscription"]
+      responses: {
+        key: "200"
+        value: { description: "Successfully unsubscribed" }
+      }
+      responses: {
+        key: "400"
+        value: { description: "Invalid unsubscribe token or already unsubscribed" }
+      }
+      responses: {
+        key: "500"
+        value: { description: "Internal server error" }
+      }
+    };
+  }
+}
+
+message SubscribeRequest {
+  string email = 1;
+  string city = 2;
+  string frequency = 3; // expected: "hourly" or "daily"
+}
+
+message TokenRequest {
+  string token = 1;
+}
+
+message MessageResponse {
+  string message = 1;
+}
