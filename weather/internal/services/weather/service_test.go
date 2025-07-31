@@ -3,8 +3,9 @@ package weather
 import (
 	"context"
 	"errors"
-	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 	"testing"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/models"
 	"github.com/gin-gonic/gin"

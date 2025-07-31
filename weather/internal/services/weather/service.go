@@ -3,11 +3,12 @@ package weather
 import (
 	"context"
 	"errors"
-	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/models"
 	"net/http"
 	"path"
 	"reflect"
 	"runtime"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/models"
 
 	"github.com/rs/zerolog"
 )
