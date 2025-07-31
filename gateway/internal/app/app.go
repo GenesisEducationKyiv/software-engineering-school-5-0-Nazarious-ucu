@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/metrics"
+
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/rs/zerolog"
 	httpSwagger "github.com/swaggo/http-swagger"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -21,41 +23,47 @@ import (
 
 type App struct {
 	cfg cfg.Config
-	log *zap.SugaredLogger
+	l   zerolog.Logger
 }
 
-func New(cfg cfg.Config, logger *zap.SugaredLogger) *App {
+func New(cfg cfg.Config, logger zerolog.Logger) *App {
 	return &App{
 		cfg: cfg,
-		log: logger,
+		l:   logger,
 	}
 }
 
 func (a *App) Start(ctx context.Context) error {
+	m := metrics.NewMetrics("gateway")
+
 	mux := runtime.NewServeMux()
 	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
-	a.log.Infow("registering SubscriptionService handler",
-		"endpoint", a.cfg.SubServer.Address(),
-	)
+	a.l.Info().
+		Str("endpoint", a.cfg.SubServer.Address()).
+		Msg("registering SubscriptionService handler")
 	if err := subs.RegisterSubscriptionServiceHandlerFromEndpoint(
 		ctx,
 		mux,
 		a.cfg.SubServer.Address(),
 		dialOpts); err != nil {
-		a.log.Errorw("failed to register SubscriptionService handler", "error", err)
+		a.l.Error().
+			Err(err).
+			Msg("failed to register SubscriptionService handler")
 		return err
 	}
 
-	a.log.Infow("registering WeatherService handler",
-		"endpoint", a.cfg.WeatherServer.Address(),
-	)
+	a.l.Info().
+		Str("endpoint", a.cfg.WeatherServer.Address()).
+		Msg("registering WeatherService handler")
 	if err := weatherpb.RegisterWeatherServiceHandlerFromEndpoint(
 		ctx,
 		mux,
 		a.cfg.WeatherServer.Address(),
 		dialOpts); err != nil {
-		a.log.Errorw("failed to register WeatherService handler", "error", err)
+		a.l.Error().
+			Err(err).
+			Msg("failed to register WeatherService handler")
 		return err
 	}
 
@@ -76,26 +84,41 @@ func (a *App) Start(ctx context.Context) error {
 	subHandler := subscription.NewHandler(
 		&http.Client{},
 		a.cfg.SubServer.Host+":"+a.cfg.SubServer.HTTPPort,
-		a.log,
+		a.l,
+		m,
 	)
 	weathHandler := weatherHTTP.NewHandler(
 		&http.Client{},
 		a.cfg.WeatherServer.Host+":"+a.cfg.WeatherServer.HTTPPort,
-		a.log,
+		a.l,
+		m,
 	)
-	subHandler.RegisterRoutes(httpMux)
-	weathHandler.RegisterRoutes(httpMux)
+
+	httpMux.Handle("/api/v1/http/subscriptions/subscribe", m.InstrumentHandler(
+		http.HandlerFunc(subHandler.HandleSubscribe)))
+	httpMux.Handle("/api/v1/http/subscriptions/confirm/", m.InstrumentHandler(
+		http.HandlerFunc(subHandler.HandleConfirm)))
+	httpMux.Handle("/api/v1/http/subscriptions/unsubscribe/", m.InstrumentHandler(
+		http.HandlerFunc(subHandler.HandleUnsubscribe)))
+
+	httpMux.Handle("/api/v1/http/weather", m.InstrumentHandler(
+		http.HandlerFunc(weathHandler.HandleGetWeather)))
 
 	// Launch server
 	go func() {
-		a.log.Infow("starting gateway HTTP server", "address", a.cfg.ServerAddress())
+		a.l.Info().
+			Str("address", a.cfg.ServerAddress()).
+			Msg("starting gateway HTTP server")
 		if err := apiServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			a.log.Errorw("gateway server error", "error", err)
+			a.l.Error().
+				Err(err).
+				Msg("gateway server error")
 		}
 	}()
 
 	<-ctx.Done()
-	a.log.Infow("shutdown signal received, stopping gateway")
+	a.l.Info().
+		Msg("shutdown signal received, stopping gateway")
 
 	// Graceful shutdown with timeout
 	shutdownCtx, cancel := context.WithTimeout(
@@ -104,9 +127,12 @@ func (a *App) Start(ctx context.Context) error {
 	defer cancel()
 
 	if err := apiServer.Shutdown(shutdownCtx); err != nil {
-		a.log.Errorw("forced shutdown due to error", "error", err)
+		a.l.Error().
+			Err(err).
+			Msg("forced shutdown due to error")
 	} else {
-		a.log.Infow("gateway exited gracefully")
+		a.l.Info().
+			Msg("gateway exited gracefully")
 	}
 
 	return nil

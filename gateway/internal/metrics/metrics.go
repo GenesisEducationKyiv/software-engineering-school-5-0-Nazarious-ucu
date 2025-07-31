@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"database/sql"
 	"net/http"
 	"time"
 
@@ -34,7 +33,7 @@ type Metrics struct {
 	TechnicalErrors *prometheus.CounterVec
 }
 
-func NewMetrics(serviceName string, db *sql.DB, dbName string) *Metrics {
+func NewMetrics(serviceName string) *Metrics {
 	m := &Metrics{}
 
 	// Consistent labeling scheme across all metrics
@@ -126,7 +125,6 @@ func NewMetrics(serviceName string, db *sql.DB, dbName string) *Metrics {
 		m.ServiceUptime,
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		collectors.NewDBStatsCollector(db, dbName),
 		m.BusinessErrors,
 		m.TechnicalErrors,
 	)
@@ -143,7 +141,7 @@ func (m *Metrics) InstrumentHandler(next http.Handler) http.Handler {
 
 		duration := time.Since(start).Seconds()
 
-		statusClass := getStatusClass(wrapped.Status)
+		statusClass := m.GetStatusClass(wrapped.Status)
 
 		labels := prometheus.Labels{"method": r.Method, "endpoint": r.URL.Path, "status_class": statusClass}
 
@@ -169,7 +167,7 @@ func (m *Metrics) InstrumentHandler(next http.Handler) http.Handler {
 	})
 }
 
-func getStatusClass(status int) string {
+func (m *Metrics) GetStatusClass(status int) string {
 	switch {
 	case status >= 200 && status < 300:
 		return "2xx"

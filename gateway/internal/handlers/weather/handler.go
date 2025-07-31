@@ -7,91 +7,217 @@ import (
 	"net/url"
 	"time"
 
-	"go.uber.org/zap"
+	"github.com/rs/zerolog"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/metrics"
 )
 
-const timeoutDuration = 10 * time.Second
+const (
+	timeoutDuration = 10 * time.Second
+)
 
+// Handler proxies weather requests and records logs/metrics.
 type Handler struct {
 	client  *http.Client
 	baseURL string
-	logger  *zap.SugaredLogger
+	logger  zerolog.Logger
+	m       *metrics.Metrics
 }
 
-func NewHandler(client *http.Client, weatherServiceBaseURL string, logger *zap.SugaredLogger) *Handler {
-	return &Handler{
-		client:  client,
-		baseURL: weatherServiceBaseURL,
-		logger:  logger,
+// NewHandler creates a new weather HTTP handler.
+func NewHandler(
+	client *http.Client,
+	weatherServiceBaseURL string,
+	logger zerolog.Logger,
+	m *metrics.Metrics,
+) *Handler {
+	return &Handler{client: client, baseURL: weatherServiceBaseURL, logger: logger, m: m}
+}
+
+// HandleGetWeather handles GET /api/v1/http/weather?city={city}.
+func (h *Handler) HandleGetWeather(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	clientIP := r.RemoteAddr
+
+	// Entry log
+	h.logger.Debug().
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Str("client_ip", clientIP).
+		Msg("start HandleGetWeather")
+
+	// Method check
+	if r.Method != http.MethodGet {
+		h.logger.Warn().
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Msg("method not allowed")
+
+		// Only domain metrics here
+		h.m.WeatherFailures.
+			WithLabelValues(r.Method, r.URL.Path, "5xx").
+			Inc()
+
+		h.logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("method failed: not allowed")
+
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
-}
 
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/api/v1/http/weather", h.handleGetWeather)
-}
-
-func (h *Handler) handleGetWeather(w http.ResponseWriter, r *http.Request) {
+	// Query param check
 	city := r.URL.Query().Get("city")
 	if city == "" {
-		h.logger.Warn("missing city query parameter")
+		h.logger.Warn().
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Msg("missing city query parameter")
+
+		// domain failure metric
+		h.m.WeatherFailures.
+			WithLabelValues(r.Method, r.URL.Path, "4xx").
+			Inc()
+
+		h.logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("method failed: missing city")
+
 		http.Error(w, "city query parameter is required", http.StatusBadRequest)
 		return
 	}
 
+	h.logger.Info().
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Str("client_ip", clientIP).
+		Str("city", city).
+		Msg("forwarding weather request")
+
+	// Forward to backend
 	ctx, cancel := context.WithTimeout(r.Context(), timeoutDuration)
 	defer cancel()
 
 	targetURL, err := url.Parse(h.baseURL + "/weather")
 	if err != nil {
-		h.logger.Errorw("failed to parse weather service URL",
-			"baseURL", h.baseURL, "error", err,
-		)
+		h.logger.Error().
+			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Msg("failed to parse weather service URL")
+
+		// domain failure metric
+		h.m.WeatherFailures.
+			WithLabelValues(r.Method, r.URL.Path, "5xx").
+			Inc()
+
+		h.logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("parsing URL failed")
+
 		http.Error(w, "Failed to parse weather service URL", http.StatusInternalServerError)
 		return
 	}
-	q := targetURL.Query()
-	q.Set("city", city)
-	targetURL.RawQuery = q.Encode()
+	targetURL.RawQuery = url.Values{"city": {city}}.Encode()
 
-	// Create proxied request
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL.String(), nil)
 	if err != nil {
-		h.logger.Errorw("failed to create proxied request",
-			"url", targetURL.String(), "error", err,
-		)
+		h.logger.Error().
+			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Msg("failed to create proxied request")
+
+		// domain failure metric
+		h.m.WeatherFailures.
+			WithLabelValues(r.Method, r.URL.Path, "5xx").
+			Inc()
+
+		h.logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("creating request failed")
+
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
 	}
 
 	resp, err := h.client.Do(req)
 	if err != nil {
-		h.logger.Errorw("error forwarding request",
-			"url", targetURL.String(), "error", err,
-		)
+		h.logger.Error().
+			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Msg("error forwarding request to backend")
+
+		// domain failure metric
+		h.m.WeatherFailures.
+			WithLabelValues(r.Method, r.URL.Path, "5xx").
+			Inc()
+
+		h.logger.Info().
+			Dur("duration_ms", time.Since(start)).
+			Msg("forwarding request failed")
+
 		http.Error(w, "Failed to contact weather service", http.StatusInternalServerError)
 		return
 	}
 	defer func(body io.ReadCloser) {
 		err := body.Close()
 		if err != nil {
-			h.logger.Errorw("error closing response body",
-				"url", targetURL.String(), "error", err,
-			)
+			h.logger.Error().
+				Err(err).
+				Str("method", r.Method).
+				Str("path", r.URL.Path).
+				Str("client_ip", clientIP).
+				Msg("error closing response body")
 		}
 	}(resp.Body)
 
+	// Proxy response
 	w.WriteHeader(resp.StatusCode)
 
 	written, err := io.Copy(w, resp.Body)
 	if err != nil {
-		h.logger.Errorw("error writing response body", "error", err)
+		h.logger.Error().
+			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Msg("error writing response body")
 		return
 	}
+
+	// Record domain metrics
+	h.m.WeatherProcessingTime.WithLabelValues(
+		r.Method,
+		r.URL.Path,
+		h.m.GetStatusClass(resp.StatusCode)).Observe(time.Since(start).Seconds())
+
+	if resp.StatusCode >= http.StatusInternalServerError {
+		h.m.WeatherFailures.WithLabelValues(r.Method, r.URL.Path, h.m.GetStatusClass(resp.StatusCode)).Inc()
+	}
+
+	// Final log
 	if written == 0 {
-		h.logger.Warnw("no data written to response", "url", targetURL.String())
+		h.logger.Warn().
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
+			Msg("no data written to response")
 	} else {
-		h.logger.Infow("successfully proxied weather response",
-			"city", city, "status", resp.StatusCode, "bytes", written,
-		)
+		h.logger.Info().
+			Int("status", resp.StatusCode).
+			Int("bytes", int(written)).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
+			Msg("successfully proxied weather response")
 	}
 }

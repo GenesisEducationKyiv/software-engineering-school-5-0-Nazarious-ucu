@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"go.uber.org/zap"
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/cfg"
@@ -28,22 +28,12 @@ func main() {
 		log.Panicf("failed to load configuration: %v", err)
 	}
 
-	logger, err := zap.NewProduction()
+	l, err := logger.NewLogger(config.LogsPath, "gateway")
 	if err != nil {
-		panic("cannot initialize zap logger: " + err.Error())
+		panic("cannot initialize logger: " + err.Error())
 	}
-	defer func(logger *zap.Logger) {
-		err := logger.Sync()
-		if err != nil {
-			log.Printf("failed to sync logger: %v", err)
-		} else {
-			log.Println("logger synced successfully")
-		}
-	}(logger)
 
-	sugar := logger.Sugar()
-
-	application := app.New(*config, sugar)
+	application := app.New(*config, l)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

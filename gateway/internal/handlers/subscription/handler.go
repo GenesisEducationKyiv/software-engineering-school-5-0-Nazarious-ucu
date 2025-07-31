@@ -4,20 +4,21 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
-	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/metrics"
 	"io"
 	"net/http"
 	"time"
 
 	"github.com/rs/zerolog"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/metrics"
 	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/models"
 )
 
-const timeoutDuration = 10 * time.Second
+const (
+	timeoutDuration = 10 * time.Second
+)
 
-var ErrSubscriptionExists = errors.New("subscription already exists")
+// var ErrSubscriptionExists = errors.New("subscription already exists")
 
 type Handler struct {
 	client *http.Client
@@ -30,34 +31,31 @@ func NewHandler(
 	client *http.Client,
 	subscribeURL string,
 	logger zerolog.Logger,
-	metrics *metrics.Metrics) *Handler {
+	m *metrics.Metrics,
+) *Handler {
 	return &Handler{
 		client: client,
 		subURL: subscribeURL,
 		logger: logger,
-		m:      metrics,
+		m:      m,
 	}
 }
 
-// HandleSubscribe
-// @Summary Subscribe to weather updates
-// @Description Subscribe an email to receive weather updates for a specific city.
-// @Tags subscription
-// @Accept application/x-www-form-urlencoded
-// @Param email formData string true "Email address to subscribe"
-// @Param city formData string true "City for weather updates"
-// @Param frequency formData string true "Frequency of updates" Enums(hourly, daily)
-// @Success 200
-// @Failure 400
-// @Failure 404
-// @Failure 500
-// @Router /subscribe [post]
 func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+	clientIP := r.RemoteAddr
+
+	h.logger.Debug().
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Str("client_ip", clientIP).
+		Msg("start HandleSubscribe")
+
 	if r.Method != http.MethodPost {
 		h.logger.Warn().
 			Str("method", r.Method).
 			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
 			Msg("method not allowed")
 
 		h.m.BusinessErrors.
@@ -71,11 +69,11 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		h.logger.Error().
 			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("failed to parse form")
-
-		h.m.TechnicalErrors.
-			WithLabelValues("decode_error", "parse_form", "critical").
-			Inc()
 
 		http.Error(w, "Failed to parse form", http.StatusBadRequest)
 		return
@@ -90,6 +88,13 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	if userData.Email == "" || userData.City == "" || userData.Frequency == "" {
 		h.logger.Warn().
 			Interface("data", userData).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Bool("email_empty", userData.Email == "").
+			Bool("city_empty", userData.City == "").
+			Bool("frequency_empty", userData.Frequency == "").
+			Dur("duration_ms", time.Since(start)).
 			Msg("missing required subscription fields")
 
 		h.m.BusinessErrors.
@@ -101,7 +106,9 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.logger.Info().
-		Str("email", userData.Email).
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Str("client_ip", clientIP).
 		Str("city", userData.City).
 		Str("frequency", userData.Frequency).
 		Msg("received subscribe request")
@@ -113,11 +120,11 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error().
 			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("failed to marshal subscription payload")
-
-		h.m.TechnicalErrors.
-			WithLabelValues("marshal_error", "json_marshal", "critical").
-			Inc()
 
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -130,13 +137,13 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 		bytes.NewReader(payload))
 	if err != nil {
 		h.logger.Error().
-			Str("url", h.subURL+"/subscribe").
 			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Str("url", h.subURL+"/subscribe").
+			Dur("duration_ms", time.Since(start)).
 			Msg("failed to create backend request")
-
-		h.m.TechnicalErrors.
-			WithLabelValues("request_error", "new_request", "critical").
-			Inc()
 
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
@@ -147,11 +154,11 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error().
 			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("error sending subscribe request to backend")
-
-		h.m.TechnicalErrors.
-			WithLabelValues("network_error", "backend_unreachable", "critical").
-			Inc()
 
 		http.Error(w, "Failed to send request", http.StatusInternalServerError)
 		return
@@ -160,31 +167,36 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 		if err := body.Close(); err != nil {
 			h.logger.Error().
 				Err(err).
-				Str("email", userData.Email).
+				Str("method", r.Method).
+				Str("path", r.URL.Path).
 				Str("city", userData.City).
+				Str("client_ip", clientIP).
 				Msg("error closing response body")
 		}
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			h.logger.Error().
+				Err(err).
+				Int("status", resp.StatusCode).
+				Str("method", r.Method).
+				Str("path", r.URL.Path).
+				Str("client_ip", clientIP).
+				Dur("duration_ms", time.Since(start)).
+				Msg("failed to read response body")
+			http.Error(w, "Failed to read response", http.StatusInternalServerError)
+			return
+		}
 		h.logger.Error().
 			Int("status", resp.StatusCode).
 			Str("body", string(body)).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("backend subscription error")
-
-		// classify conflict vs other errors
-		if resp.StatusCode == http.StatusConflict {
-			h.m.BusinessErrors.
-				WithLabelValues("subscription_exists", "409", "warning").
-				Inc()
-			http.Error(w, ErrSubscriptionExists.Error(), http.StatusConflict)
-		} else {
-			h.m.TechnicalErrors.
-				WithLabelValues("backend_error", http.StatusText(resp.StatusCode), "critical").
-				Inc()
-			http.Error(w, "Failed to subscribe", http.StatusInternalServerError)
-		}
 		return
 	}
 
@@ -194,6 +206,10 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error().
 			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("failed to write subscribe response")
 		return
 	}
@@ -202,10 +218,12 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	h.m.SubscriptionsCreated.
 		WithLabelValues(userData.Frequency, "http_form").
 		Inc()
-	h.m.SubscriptionsActive.Inc()
 
 	h.logger.Info().
 		Int("bytes_written", n).
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Str("client_ip", clientIP).
 		Dur("duration_ms", time.Since(start)).
 		Msg("subscription success")
 }
@@ -220,28 +238,57 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 // @Failure 404
 // @Router /confirm/{token} [get]
 func (h *Handler) HandleConfirm(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	clientIP := r.RemoteAddr
+
+	// Entry log
+	h.logger.Debug().
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Str("client_ip", clientIP).
+		Msg("start HandleConfirm")
+
+	// Method check
 	if r.Method != http.MethodGet {
 		h.logger.Warn().
 			Str("method", r.Method).
 			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
 			Msg("method not allowed")
+
+		h.m.BusinessErrors.
+			WithLabelValues("method_not_allowed", "405", "warning").
+			Inc()
+
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
+	// Extract token
 	token := extractTokenFromPath(r.URL.Path, "/api/v1/http/subscriptions/confirm/")
 	if token == "" {
 		h.logger.Warn().
+			Str("method", r.Method).
 			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
 			Msg("confirm token not provided")
+
+		h.m.BusinessErrors.
+			WithLabelValues("validation_error", "missing_token", "warning").
+			Inc()
+
 		http.Error(w, "Token not provided", http.StatusBadRequest)
 		return
 	}
 
 	h.logger.Info().
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Str("client_ip", clientIP).
 		Str("token", token).
 		Msg("confirming subscription")
 
+	// Forward to backend
 	ctx, cancel := context.WithTimeout(r.Context(), timeoutDuration)
 	defer cancel()
 
@@ -249,7 +296,12 @@ func (h *Handler) HandleConfirm(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error().
 			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("failed to create confirm request")
+
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
 	}
@@ -258,7 +310,12 @@ func (h *Handler) HandleConfirm(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error().
 			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("error sending confirm request to backend")
+
 		http.Error(w, "Failed to send request", http.StatusInternalServerError)
 		return
 	}
@@ -266,39 +323,64 @@ func (h *Handler) HandleConfirm(w http.ResponseWriter, r *http.Request) {
 		if err := body.Close(); err != nil {
 			h.logger.Error().
 				Err(err).
+				Str("method", r.Method).
+				Str("path", r.URL.Path).
+				Str("client_ip", clientIP).
 				Str("token", token).
 				Msg("error closing response body")
 		}
 	}(resp.Body)
 
+	// Handle non-OK response
 	if resp.StatusCode != http.StatusOK {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
 			h.logger.Error().
-				Err(err).
-				Int("status", resp.StatusCode).
+				Err(readErr).
+				Str("body", string(body)).
+				Str("method", r.Method).
+				Str("path", r.URL.Path).
+				Str("client_ip", clientIP).
+				Str("client_ip", clientIP).
 				Msg("failed to read response body")
+
 			http.Error(w, "Failed to read response", http.StatusInternalServerError)
 			return
 		}
+
 		h.logger.Error().
 			Int("status", resp.StatusCode).
 			Str("body", string(body)).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("backend confirm error")
+
 		http.Error(w, "Failed to confirm subscription", resp.StatusCode)
 		return
 	}
 
+	// Success
 	w.WriteHeader(http.StatusOK)
 	n, err := w.Write([]byte(`{"message":"Confirmed successfully"}`))
 	if err != nil {
 		h.logger.Error().
 			Err(err).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("failed to write confirm response")
 		return
 	}
+
+	h.m.SubscriptionsActive.Inc()
+
 	h.logger.Info().
 		Int("bytes_written", n).
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Str("client_ip", clientIP).
+		Dur("duration_ms", time.Since(start)).
 		Msg("confirm success")
 }
 
@@ -313,10 +395,21 @@ func (h *Handler) HandleConfirm(w http.ResponseWriter, r *http.Request) {
 // @Router /unsubscribe/{token} [get]
 func (h *Handler) HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+	clientIP := r.RemoteAddr
+
+	// Entry log
+	h.logger.Debug().
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Str("client_ip", clientIP).
+		Msg("start HandleUnsubscribe")
+
+	// Method check
 	if r.Method != http.MethodGet {
 		h.logger.Warn().
 			Str("method", r.Method).
 			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
 			Msg("method not allowed")
 
 		h.m.BusinessErrors.
@@ -327,10 +420,13 @@ func (h *Handler) HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract token
 	token := extractTokenFromPath(r.URL.Path, "/api/v1/http/subscriptions/unsubscribe/")
 	if token == "" {
 		h.logger.Warn().
+			Str("method", r.Method).
 			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
 			Msg("unsubscribe token not provided")
 
 		h.m.BusinessErrors.
@@ -342,9 +438,13 @@ func (h *Handler) HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.logger.Info().
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Str("client_ip", clientIP).
 		Str("token", token).
 		Msg("unsubscribing token")
 
+	// Forward to backend
 	ctx, cancel := context.WithTimeout(r.Context(), timeoutDuration)
 	defer cancel()
 
@@ -352,11 +452,11 @@ func (h *Handler) HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error().
 			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("failed to create unsubscribe request")
-
-		h.m.TechnicalErrors.
-			WithLabelValues("request_error", "new_request", "critical").
-			Inc()
 
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
@@ -366,37 +466,65 @@ func (h *Handler) HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error().
 			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("error sending unsubscribe request to backend")
-
-		h.m.TechnicalErrors.
-			WithLabelValues("network_error", "backend_unreachable", "critical").
-			Inc()
 
 		http.Error(w, "Failed to send request", http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
+	defer func(body io.ReadCloser) {
+		if err := body.Close(); err != nil {
+			h.logger.Error().
+				Err(err).
+				Str("method", r.Method).
+				Str("path", r.URL.Path).
+				Str("client_ip", clientIP).
+				Str("token", token).
+				Msg("error closing response body")
+		}
+	}(resp.Body)
 
+	// Handle non-OK response
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			h.logger.Error().
+				Err(readErr).
+				Str("method", r.Method).
+				Str("path", r.URL.Path).
+				Str("client_ip", clientIP).
+				Msg("failed to read response body")
+
+			http.Error(w, "Failed to read response", http.StatusInternalServerError)
+			return
+		}
+
 		h.logger.Error().
 			Int("status", resp.StatusCode).
 			Str("body", string(body)).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("backend unsubscribe error")
-
-		h.m.TechnicalErrors.
-			WithLabelValues("backend_error", http.StatusText(resp.StatusCode), "critical").
-			Inc()
 
 		http.Error(w, "Failed to unsubscribe", resp.StatusCode)
 		return
 	}
 
+	// Success
 	w.WriteHeader(http.StatusOK)
 	n, err := w.Write([]byte(`{"message":"Unsubscribed successfully"}`))
 	if err != nil {
 		h.logger.Error().
 			Err(err).
+			Str("method", r.Method).
+			Str("path", r.URL.Path).
+			Str("client_ip", clientIP).
+			Dur("duration_ms", time.Since(start)).
 			Msg("failed to write unsubscribe response")
 		return
 	}
@@ -405,6 +533,9 @@ func (h *Handler) HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Info().
 		Int("bytes_written", n).
+		Str("method", r.Method).
+		Str("path", r.URL.Path).
+		Str("client_ip", clientIP).
 		Dur("duration_ms", time.Since(start)).
 		Msg("unsubscribe success")
 }
