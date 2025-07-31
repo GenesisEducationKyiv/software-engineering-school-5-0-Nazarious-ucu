@@ -3,27 +3,45 @@ package producers
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/pkg/messaging"
+	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/metrics"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/models"
+	"github.com/rs/zerolog"
 	"github.com/wagslane/go-rabbitmq"
 )
 
+// Producer publishes events to RabbitMQ with structured logging and metrics.
 type Producer struct {
 	prod *rabbitmq.Publisher
-	log  *log.Logger
+	log  zerolog.Logger
+	m    *metrics.Metrics
 }
 
-func NewProducer(prod *rabbitmq.Publisher, logger *log.Logger) *Producer {
-	return &Producer{
-		prod: prod,
-		log:  logger,
-	}
+// NewProducer initializes a Producer with logger context and metrics collector.
+func NewProducer(
+	prod *rabbitmq.Publisher,
+	logger zerolog.Logger,
+	m *metrics.Metrics,
+) *Producer {
+	// enrich logger with component
+	logger = logger.With().Str("component", "RabbitMQProducer").Logger()
+	return &Producer{prod: prod, log: logger, m: m}
 }
 
-func (p *Producer) Publish(ctx context.Context, routingKey []string, body []byte) error {
-	if err := p.prod.PublishWithContext(
+// Publish sends a raw message to the given routing keys, recording logs and metrics.
+func (p *Producer) Publish(
+	ctx context.Context,
+	routingKey []string,
+	body []byte,
+) error {
+	start := time.Now()
+	p.log.Debug().Ctx(ctx).
+		Strs("routing_key", routingKey).
+		Msg("publishing message to exchange")
+
+	err := p.prod.PublishWithContext(
 		ctx,
 		body,
 		routingKey,
@@ -31,14 +49,33 @@ func (p *Producer) Publish(ctx context.Context, routingKey []string, body []byte
 		rabbitmq.WithPublishOptionsMandatory,
 		rabbitmq.WithPublishOptionsPersistentDelivery,
 		rabbitmq.WithPublishOptionsExchange(messaging.ExchangeName),
-	); err != nil {
-		p.log.Printf("Failed to publish message: %v", err)
+	)
+	dur := time.Since(start)
+
+	if err != nil {
+		p.log.Error().
+			Err(err).Ctx(ctx).
+			Strs("routing_key", routingKey).
+			Dur("duration", dur).
+			Msg("failed to publish message")
+
+		// record a publishing failure metric, if desired
+		// p.m.TechnicalErrors.WithLabelValues("rabbitmq_publish", err.Error(), "critical").Inc()
 		return err
 	}
-	p.log.Printf("Message published with routing key %s", routingKey)
+
+	p.log.Info().Ctx(ctx).
+		Strs("routing_key", routingKey).
+		Dur("duration", dur).
+		Msg("message published successfully")
+
+	// record a successful publish metric, if desired
+	// p.m.BusinessErrors.WithLabelValues("rabbitmq_publish_success", "", "info").Inc()
+
 	return nil
 }
 
+// SendWeather marshals a WeatherNotifyEvent and publishes it.
 func (p *Producer) SendWeather(
 	ctx context.Context,
 	email string,
@@ -55,13 +92,17 @@ func (p *Producer) SendWeather(
 
 	body, err := json.Marshal(event)
 	if err != nil {
-		p.log.Printf("Failed to marshal weather event: %v", err)
+		p.log.Error().
+			Err(err).Ctx(ctx).
+			Str("email", email).
+			Msg("failed to marshal WeatherNotifyEvent")
 		return err
 	}
 
 	return p.Publish(ctx, []string{messaging.WeatherRoutingKey}, body)
 }
 
+// SendConfirmation marshals a NewSubscriptionEvent and publishes it.
 func (p *Producer) SendConfirmation(
 	ctx context.Context,
 	email,
@@ -74,7 +115,10 @@ func (p *Producer) SendConfirmation(
 
 	body, err := json.Marshal(event)
 	if err != nil {
-		p.log.Printf("Failed to marshal subscription event: %v", err)
+		p.log.Error().
+			Err(err).Ctx(ctx).
+			Str("email", email).
+			Msg("failed to marshal NewSubscriptionEvent")
 		return err
 	}
 
