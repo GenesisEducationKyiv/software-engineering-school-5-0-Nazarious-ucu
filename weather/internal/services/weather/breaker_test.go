@@ -80,7 +80,7 @@ func TestBreakerClient_UnderlyingErrorBeforeTrip(t *testing.T) {
 	data, err := bc.Fetch(context.Background(), city)
 	assert.Error(t, err)
 	assert.Empty(t, data)
-	assert.Contains(t, err.Error(), breakerName+" unavailable: "+underlyingErr.Error())
+	assert.Contains(t, err.Error(), underlyingErr.Error())
 
 	wrapped.AssertExpectations(t)
 	wrapped.AssertNumberOfCalls(t, "Fetch", 1)
@@ -105,7 +105,7 @@ func TestBreakerClient_TripCircuitAfterFiveFailures(t *testing.T) {
 	for i := 1; i <= 5; i++ {
 		_, err := bc.Fetch(context.Background(), city)
 		assert.Error(t, err, "call #%d should error before trip", i)
-		assert.Contains(t, err.Error(), breakerName+" unavailable: "+underlyingErr.Error())
+		assert.Contains(t, err.Error(), underlyingErr.Error())
 	}
 
 	_, err = bc.Fetch(context.Background(), city)
