@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/metrics"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -72,7 +74,7 @@ func (a *App) Start(ctx context.Context) error {
 		httpSwagger.URL("http://"+a.cfg.ServerAddress()+"/swagger/swagger.json"),
 	))
 
-	httpMux.Handle("/", mux)
+	httpMux.Handle("/metrics", promhttp.Handler())
 
 	apiServer := &http.Server{
 		Addr:        a.cfg.ServerAddress(),
@@ -104,6 +106,7 @@ func (a *App) Start(ctx context.Context) error {
 	httpMux.Handle("/api/v1/http/weather", m.InstrumentHandler(
 		http.HandlerFunc(weathHandler.HandleGetWeather)))
 
+	httpMux.Handle("/v2/", mux)
 	// Launch server
 	go func() {
 		a.l.Info().

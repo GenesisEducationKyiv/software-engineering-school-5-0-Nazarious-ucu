@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
 type ResponseWriter struct {
@@ -123,8 +122,8 @@ func NewMetrics(serviceName string) *Metrics {
 		m.WeatherProcessingTime,
 		m.WeatherFailures,
 		m.ServiceUptime,
-		collectors.NewGoCollector(),
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+		// collectors.NewGoCollector(),
+		// collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 		m.BusinessErrors,
 		m.TechnicalErrors,
 	)
