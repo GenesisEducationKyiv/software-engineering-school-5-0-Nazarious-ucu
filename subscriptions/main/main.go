@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/metrics"
 	"log"
 	"os/signal"
 	"syscall"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/config"
@@ -27,9 +30,11 @@ func main() {
 		log.Panicf("failed to load configuration: %v", err)
 	}
 
-	l := log.New(log.Writer(), "WeatherSubscriptionAPI: ", log.LstdFlags)
+	l, err := logger.NewLogger("logs/subscriptions.log", "subscriptions")
 
-	application := app.New(*cfg, l)
+	metr := metrics.NewMetrics("subscription")
+
+	application := app.New(*cfg, l, metr)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

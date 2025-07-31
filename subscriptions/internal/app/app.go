@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/metrics"
+	"github.com/rs/zerolog"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/producers"
 
 	grpc2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/grpc"
@@ -60,26 +63,38 @@ type ServiceContainer struct {
 
 type App struct {
 	cfg config.Config
-	log *log.Logger
+	l   zerolog.Logger
+	m   *metrics.Metrics
 }
 
-func New(cfg config.Config, logger *log.Logger) *App {
-	return &App{
-		cfg: cfg,
-		log: logger,
-	}
+func New(cfg config.Config, logger zerolog.Logger, m *metrics.Metrics) *App {
+	// Enrich logger with service name and timestamp
+	logger = logger.With().Str("service", "subscription-service").Timestamp().Logger()
+	logger.Info().Msg("Logger initialized for subscription-service")
+	return &App{cfg: cfg, l: logger, m: m}
 }
 
 func (a *App) Start(ctx context.Context) error {
-	srvContainer := a.init()
-	a.log.Println("Starting server on", a.cfg.Server.GrpcPort)
+	// Initialize metrics within Start to avoid changing App struct
+	a.l.Info().Msg("Metrics initialized")
 
+	srvContainer := a.init()
+	a.l.Info().Str("grpc_port", a.cfg.Server.GrpcPort).Msg("Starting server")
+
+	// Ensure HTTP server is closed on exit
 	defer func() {
 		if err := srvContainer.Srv.Close(); err != nil {
-			a.log.Println("Error stopping server:", err)
+			a.l.Error().Err(err).Msg("Error closing HTTP server")
 		}
 	}()
 
+	// Insert metrics middleware into router
+	srvContainer.Router.Use(gin.Recovery(), func(c *gin.Context) {
+		// Proxy to metrics middleware
+		a.m.HTTPMiddleware()(c)
+	})
+
+	// Register HTTP endpoints
 	subHandler := http2.NewHandler(srvContainer.SubscriptionService)
 
 	srvContainer.Router.POST("/subscribe", subHandler.Subscribe)
@@ -89,159 +104,144 @@ func (a *App) Start(ctx context.Context) error {
 	srvContainer.Router.GET("/swagger/*any", swagger.WrapHandler(swaggerfiles.Handler))
 	srvContainer.Router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, timeoutDuration)
+	// Start notifier
+	ctxCron, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
+	srvContainer.Notificator.Start(ctxCron)
+	a.l.Info().Msg("Notifier started")
 
-	srvContainer.Notificator.Start(ctxWithTimeout)
-
+	// Start HTTP server
+	a.l.Info().Str("http_addr", a.cfg.ServerAddress()).Msg("HTTP server listening")
 	if err := srvContainer.Srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		a.l.Error().Err(err).Msg("HTTP server error")
 		return err
 	}
-	a.log.Println("Application started successfully on", a.cfg.Server.GrpcPort)
+	a.l.Info().Msg("HTTP server stopped")
 
 	<-ctx.Done()
-
-	if err := a.Stop(srvContainer); err != nil {
-		a.log.Printf("failed to shutdown application: %v", err)
-		return err
-	}
-	a.log.Println("Application shutdown successfully")
-	return nil
+	a.l.Info().Msg("Shutdown signal received")
+	return a.Stop(srvContainer)
 }
 
 func (a *App) Stop(srvContainer ServiceContainer) error {
-	a.log.Println("Stopping application…")
+	a.l.Info().Msg("Stopping application")
 
-	defer func(fileLogger *zap.Logger) {
-		err := fileLogger.Sync()
-		if err != nil {
-			a.log.Printf("failed to sync file logger: %v", err)
-		} else {
-			a.log.Println("File logger synced successfully")
-		}
-	}(srvContainer.fileLogger)
-
+	// Stop notifier
 	srvContainer.Notificator.Stop()
-	a.log.Println("Notifier stopped")
+	a.l.Info().Msg("Notifier stopped")
 
-	log.Println("Shutting down gRPC server...")
+	// Graceful gRPC shutdown
 	srvContainer.GrpcServer.GracefulStop()
+	a.l.Info().Msg("gRPC server stopped")
 
+	// HTTP shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
 	defer cancel()
-
 	if err := srvContainer.Srv.Shutdown(ctx); err != nil {
-		a.log.Println("HTTP shutdown error:", err)
+		a.l.Error().Err(err).Msg("HTTP shutdown error")
 	} else {
-		a.log.Println("HTTP server stopped")
+		a.l.Info().Msg("HTTP server stopped")
 	}
 
+	// Close DB
 	if err := srvContainer.Db.Close(); err != nil {
-		a.log.Println("DB close error:", err)
+		a.l.Error().Err(err).Msg("Database close error")
 	} else {
-		a.log.Println("Database closed")
+		a.l.Info().Msg("Database closed")
 	}
 
-	a.log.Println("Shutdown complete")
+	a.l.Info().Msg("Application shutdown complete")
 	return nil
 }
 
 func (a *App) init() ServiceContainer {
-	a.log.Println("Initializing application with configuration:", a.cfg)
+	a.l.Info().Interface("config", a.cfg).Msg("Initializing application")
 
+	// DB setup
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
 	defer cancel()
-
 	db, err := CreateSqliteDb(ctx, a.cfg.DB.Dialect, a.cfg.DB.Source)
 	if err != nil {
-		a.log.Println(err)
+		a.l.Error().Err(err).Msg("DB open error")
 	}
-
 	if err := InitSqliteDb(db, a.cfg.DB.Dialect, a.cfg.DB.MigrationsPath); err != nil {
-		a.log.Println(err)
+		a.l.Error().Err(err).Msg("DB migration error")
 	}
 
-	router := gin.Default()
+	// Gin router
+	router := gin.New()
 
-	apiServer := &http.Server{
+	// HTTP server
+	httpSrv := &http.Server{
 		Addr:        a.cfg.ServerAddress(),
 		Handler:     router,
 		ReadTimeout: time.Duration(a.cfg.Server.ReadTimeout) * time.Second,
 	}
+	a.l.Info().Str("http_addr", a.cfg.ServerAddress()).Msg("HTTP server configured")
 
-	a.log.Printf("Application initialized on address: %s", apiServer.Addr)
+	// Repository
+	repo := sqlite.NewSubscriptionRepository(db, a.l)
 
-	subRepository := sqlite.NewSubscriptionRepository(db, a.log)
-
+	// RabbitMQ
 	rabbitConn, err := a.setupConn()
 	if err != nil {
-		a.log.Printf("Failed to connect to RabbitMQ: %v", err)
+		a.l.Error().Err(err).Msg("RabbitMQ connection error")
 	}
-
 	publisher, err := a.setupPublisher(rabbitConn)
 	if err != nil {
-		a.log.Printf("Failed to create RabbitMQ publisher: %v", err)
+		a.l.Error().Err(err).Msg("RabbitMQ publisher error")
 	}
+	producer := producers.NewProducer(publisher, a.l)
 
-	emailProducer := producers.NewProducer(publisher, a.log)
-
-	subService := subs2.NewService(subRepository, emailProducer)
-
-	lc := net.ListenConfig{}
-	lis, err := lc.Listen(ctx,
-		"tcp",
-		a.cfg.Server.Host+":"+a.cfg.Server.GrpcPort)
+	// Business services
+	subSvc := subs2.NewService(repo, producer)
+	grpcConn, err := grpc.DialContext(ctx, a.cfg.WeatherRPCAddr+a.cfg.WeatherRPCPort,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
-		a.log.Println(err)
+		a.l.Error().Err(err).Msg("Weather gRPC dial error")
 	}
-	grpcServer := grpc.NewServer()
+	weatherClient := weatherpb.NewWeatherServiceClient(grpcConn)
+	weatherSvc := weather.NewGrpcWeatherAdapter(weatherClient, a.l)
 
-	opt := grpc.WithTransportCredentials(insecure.NewCredentials())
-	grpcClient, err := grpc.NewClient(a.cfg.WeatherRPCAddr+a.cfg.WeatherRPCPort, opt)
-
-	if err != nil {
-		a.log.Printf("failed to create gRPC client: %v", err)
-	} else {
-		a.log.Printf(
-			"gRPC client created successfully for address: %s",
-			a.cfg.WeatherRPCAddr+a.cfg.WeatherRPCPort,
-		)
-	}
-
-	weatherGrpc := weatherpb.NewWeatherServiceClient(grpcClient)
-
-	weatherAdapter := weather.NewGrpcWeatherAdapter(weatherGrpc, a.log)
-
-	subs.RegisterSubscriptionServiceServer(grpcServer, grpc2.NewSubscriptionGRPCServer(subService))
-
-	go func() {
-		log.Println("gRPC server running at :50051")
-		if err := grpcServer.Serve(lis); err != nil {
-			a.log.Printf("gRPC server failed: %v", err)
-		}
-	}()
-
-	notificator := notifier.New(subRepository,
-		weatherAdapter,
-		emailProducer,
-		a.log,
+	// Notifier
+	n := notifier.New(repo, weatherSvc, producer, a.l,
 		a.cfg.NotifierFreq.HourlyFrequency,
 		a.cfg.NotifierFreq.DailyFrequency,
 	)
 
-	srvContainer := ServiceContainer{
-		WeatherService:      *weatherAdapter,
-		SubscriptionService: subService,
-		SubRepository:       *subRepository,
-		Notificator:         notificator,
+	// gRPC server with metrics interceptors
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(a.m.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(a.m.StreamServerInterceptor()),
+	)
+	subs.RegisterSubscriptionServiceServer(grpcServer, grpc2.NewSubscriptionGRPCServer(subSvc))
+
+	// Start gRPC
+	go func() {
+		addr := a.cfg.Server.Host + ":" + a.cfg.Server.GrpcPort
+		lc := net.ListenConfig{}
+		lis, err := lc.Listen(ctx, "tcp", addr)
+		if err != nil {
+			a.l.Fatal().Err(err).Msg("gRPC listen error")
+		}
+		a.l.Info().Str("grpc_addr", addr).Msg("gRPC server running")
+		if err := grpcServer.Serve(lis); err != nil {
+			a.l.Error().Err(err).Msg("gRPC server error")
+		}
+	}()
+
+	return ServiceContainer{
+		WeatherService:      weatherSvc,
+		SubscriptionService: subSvc,
+		EmailProducer:       producer,
+		Notificator:         n,
+		SubRepository:       *repo,
 		GrpcServer:          grpcServer,
-
-		Router: router,
-		Srv:    apiServer,
-		Db:     db,
+		Router:              router,
+		Srv:                 httpSrv,
+		Db:                  db,
 	}
-
-	return srvContainer
 }
 
 func CreateSqliteDb(ctx context.Context, dialect, name string) (*sql.DB, error) {

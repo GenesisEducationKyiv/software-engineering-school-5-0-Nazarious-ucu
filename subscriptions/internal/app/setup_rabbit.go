@@ -11,11 +11,11 @@ func (a *App) setupConn() (*rabbitmq.Conn, error) {
 		rabbitmq.WithConnectionOptionsLogging,
 	)
 	if err != nil {
-		a.log.Printf("Failed to connect to RabbitMQ: %v", err)
+		a.l.Printf("Failed to connect to RabbitMQ: %v", err)
 		return nil, err
 	}
 
-	a.log.Println("Connected to RabbitMQ successfully")
+	a.l.Println("Connected to RabbitMQ successfully")
 	return conn, nil
 }
 
@@ -33,9 +33,9 @@ func (a *App) setupPublisher(conn *rabbitmq.Conn) (*rabbitmq.Publisher, error) {
 	}
 
 	publisher.NotifyReturn(func(r rabbitmq.Return) {
-		a.log.Printf("message returned from server: %s", string(r.Body))
+		a.l.Printf("message returned from server: %s", string(r.Body))
 		if r.ReplyCode != 0 {
-			a.log.Printf("Message returned with reply code %d: %s", r.ReplyCode, r.RoutingKey)
+			a.l.Printf("Message returned with reply code %d: %s", r.ReplyCode, r.RoutingKey)
 		}
 	})
 

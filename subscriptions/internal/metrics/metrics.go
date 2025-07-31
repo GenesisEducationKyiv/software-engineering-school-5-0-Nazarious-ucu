@@ -41,7 +41,7 @@ type Metrics struct {
 }
 
 // NewMetrics creates and registers all metrics under the given namespace.
-func NewMetrics(namespace string, srv *grpc.Server) *Metrics {
+func NewMetrics(namespace string) *Metrics {
 	registry := prometheus.NewRegistry()
 	m := &Metrics{
 		HTTPRequestsTotal: prometheus.NewCounterVec(
@@ -154,7 +154,7 @@ func NewMetrics(namespace string, srv *grpc.Server) *Metrics {
 
 	// gRPC server metrics
 	grpcProm.EnableHandlingTimeHistogram()
-	grpcProm.Register(srv)
+	//grpcProm.Register(srv)
 
 	// initialize uptime and goroutines
 	m.ServiceUptime.SetToCurrentTime()
