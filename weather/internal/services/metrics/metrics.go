@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,6 +29,8 @@ type Metrics struct {
 
 // NewMetrics constructs and registers all weather-service metrics.
 func NewMetrics(serviceName string) *Metrics {
+	reg := prometheus.NewRegistry()
+
 	m := &Metrics{
 		HTTPRequestsTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -76,13 +79,17 @@ func NewMetrics(serviceName string) *Metrics {
 	}
 
 	// register
-	prometheus.MustRegister(
+	reg.MustRegister(
 		m.HTTPRequestsTotal,
 		m.HTTPRequestDuration,
 		m.WeatherRequestsTotal,
 		m.WeatherErrorsTotal,
 		// m.ServiceUptime,
-		collectors.NewGoCollector(),
+		collectors.NewGoCollector(
+			collectors.WithGoCollectorRuntimeMetrics(
+				collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/sched/latencies:seconds")},
+			),
+		),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
 

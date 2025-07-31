@@ -4,14 +4,15 @@ package api
 
 import (
 	"context"
-	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
-	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/services/metrics"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/services/metrics"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/config"
