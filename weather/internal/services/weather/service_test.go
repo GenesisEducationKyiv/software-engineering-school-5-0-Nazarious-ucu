@@ -104,7 +104,7 @@ func TestServiceProvider_GetByCity(t *testing.T) {
 		result, err := provider.GetByCity(ctx, "Lviv")
 
 		require.Error(t, err)
-		assert.Equal(t, err.Error(), "all weather API clients failed to fetch data")
+		assert.Equal(t, err.Error(), "all weather API clients failed")
 		assert.Equal(t, emptyModel, result)
 	})
 }

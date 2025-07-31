@@ -58,7 +58,7 @@ func (s *ServiceProvider) GetByCity(ctx context.Context, city string) (models.We
 		return data, nil
 	}
 	err := errors.New("all weather API clients failed")
-	s.logger.Fatal().
+	s.logger.Error().
 		Err(err).
 		Ctx(ctx).
 		Msg("GetByCity giving up")
