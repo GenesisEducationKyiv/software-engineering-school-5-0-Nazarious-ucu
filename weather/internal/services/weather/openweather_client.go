@@ -47,6 +47,7 @@ func (s *ClientOpenWeatherMap) Fetch(ctx context.Context, city string) (models.W
 	url := fmt.Sprintf("%s?q=%s&appid=%s&units=metric", s.apiURL, city, s.APIKey)
 
 	s.logger.Debug().
+		Ctx(ctx).
 		Str("city", city).
 		Str("url", url).
 		Msg("starting OpenWeatherMap request")
@@ -55,6 +56,7 @@ func (s *ClientOpenWeatherMap) Fetch(ctx context.Context, city string) (models.W
 	if err != nil {
 		s.logger.Error().
 			Err(err).
+			Ctx(ctx).
 			Str("city", city).
 			Str("url", url).
 			Msg("failed to create HTTP request")
@@ -65,6 +67,7 @@ func (s *ClientOpenWeatherMap) Fetch(ctx context.Context, city string) (models.W
 	if err != nil {
 		s.logger.Error().
 			Err(err).
+			Ctx(ctx).
 			Str("city", city).
 			Str("url", url).
 			Msg("error sending HTTP request to OpenWeatherMap")
@@ -74,6 +77,7 @@ func (s *ClientOpenWeatherMap) Fetch(ctx context.Context, city string) (models.W
 		if cerr := resp.Body.Close(); cerr != nil {
 			s.logger.Error().
 				Err(cerr).
+				Ctx(ctx).
 				Str("city", city).
 				Msg("failed to close response body")
 		}
@@ -81,6 +85,7 @@ func (s *ClientOpenWeatherMap) Fetch(ctx context.Context, city string) (models.W
 
 	if resp.StatusCode != http.StatusOK {
 		s.logger.Error().
+			Ctx(ctx).
 			Str("city", city).
 			Str("status", resp.Status).
 			Msg("OpenWeatherMap API returned non-200 status")
@@ -91,6 +96,7 @@ func (s *ClientOpenWeatherMap) Fetch(ctx context.Context, city string) (models.W
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		s.logger.Error().
 			Err(err).
+			Ctx(ctx).
 			Str("city", city).
 			Msg("failed to decode OpenWeatherMap response")
 		return models.WeatherData{}, err
@@ -104,6 +110,7 @@ func (s *ClientOpenWeatherMap) Fetch(ctx context.Context, city string) (models.W
 
 	duration := time.Since(start)
 	s.logger.Info().
+		Ctx(ctx).
 		Str("city", city).
 		Dur("duration_ms", duration).
 		Msg("successfully fetched weather data")
