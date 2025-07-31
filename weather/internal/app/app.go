@@ -126,14 +126,14 @@ func (a *App) init(ctx context.Context) ServiceContainer {
 		TimeTimeOut:  time.Duration(a.cfg.Breaker.TimeTimeOut) * time.Second,
 		RepeatNumber: a.cfg.Breaker.RepeatNumber,
 	}
-	openWeather := serviceWeather.NewBreakerClient("OpenWeather", breakerCfg,
+	openWeather := serviceWeather.NewBreakerClient("OpenWeather", breakerCfg, a.l,
 		serviceWeather.NewClientOpenWeatherMap(a.cfg.OpenWeatherMapAPIKey, a.cfg.OpenWeatherMapURL, httpLogClient, a.l),
 	)
-	weatherAPI := serviceWeather.NewBreakerClient("WeatherAPI", breakerCfg,
+	weatherAPI := serviceWeather.NewBreakerClient("WeatherAPI", breakerCfg, a.l,
 		serviceWeather.NewClientWeatherAPI(a.cfg.WeatherAPIKey, a.cfg.WeatherAPIURL, httpLogClient, a.l),
 	)
 
-	weatherBit := serviceWeather.NewBreakerClient("WeatherBit", breakerCfg,
+	weatherBit := serviceWeather.NewBreakerClient("WeatherBit", breakerCfg, a.l,
 		serviceWeather.NewClientWeatherBit(
 			a.cfg.WeatherBitAPIKey,
 			a.cfg.WeatherBitURL,
