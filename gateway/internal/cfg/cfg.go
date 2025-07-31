@@ -26,6 +26,8 @@ type Config struct {
 	Server        Server
 	SubServer     SubServer
 	WeatherServer WeatherServer
+
+	LogsPath string `envconfig:"LOGS_GATEWAY_PATH" default:"./log/gateway/gate.log"`
 }
 
 func NewConfig() (*Config, error) {
