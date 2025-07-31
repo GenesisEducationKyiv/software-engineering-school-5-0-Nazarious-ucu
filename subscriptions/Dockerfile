@@ -2,9 +2,7 @@ FROM golang:latest AS builder
 
 WORKDIR /app
 
-COPY subscriptions ./subscriptions
-COPY protos ./protos
-COPY pkg ./pkg
+COPY . .
 
 WORKDIR /app/subscriptions
 
