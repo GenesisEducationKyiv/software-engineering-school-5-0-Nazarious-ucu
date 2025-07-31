@@ -3,6 +3,7 @@
 package weather_test
 
 import (
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 	"io"
 	"log"
 	"net/http"
@@ -46,7 +47,12 @@ func Test_OpenWeather_GetByCity_Success(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewClientOpenWeatherMap("1234567890", "", m, log.Default())
+	// Initialize the OpenWeatherMap client with the mock HTTP client
+	l, err := logger.NewLogger("", "weather_test")
+	if err != nil {
+		t.Fatalf("failed to create logger: %v", err)
+	}
+	weatherAPIClient := weather.NewClientOpenWeatherMap("1234567890", "", m, l)
 
 	data, err := weatherAPIClient.Fetch(ctx, "London")
 	assert.NoError(t, err)
