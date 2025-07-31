@@ -3,11 +3,12 @@ package weather_test
 import (
 	"context"
 	"errors"
-	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/services/weather"
 
@@ -52,7 +53,7 @@ func TestBreakerClient_Success(t *testing.T) {
 	l, err := logger.NewLogger("", "breaker_test_success")
 	require.NoError(t, err)
 
-	bc := weather.NewBreakerClient(breakerName, breakerCfg, wrapped, l)
+	bc := weather.NewBreakerClient(breakerName, breakerCfg, l, wrapped)
 
 	data, err := bc.Fetch(context.Background(), city)
 	assert.NoError(t, err)
@@ -74,7 +75,7 @@ func TestBreakerClient_UnderlyingErrorBeforeTrip(t *testing.T) {
 	l, err := logger.NewLogger("", "breaker_test_underlying_error")
 	require.NoError(t, err)
 
-	bc := weather.NewBreakerClient(breakerName, breakerCfg, wrapped, l)
+	bc := weather.NewBreakerClient(breakerName, breakerCfg, l, wrapped)
 
 	data, err := bc.Fetch(context.Background(), city)
 	assert.Error(t, err)
@@ -99,7 +100,7 @@ func TestBreakerClient_TripCircuitAfterFiveFailures(t *testing.T) {
 	l, err := logger.NewLogger("", "breaker_test_trip_circuit")
 	require.NoError(t, err)
 
-	bc := weather.NewBreakerClient(breakerName, breakerCfg, wrapped, l)
+	bc := weather.NewBreakerClient(breakerName, breakerCfg, l, wrapped)
 
 	for i := 1; i <= 5; i++ {
 		_, err := bc.Fetch(context.Background(), city)

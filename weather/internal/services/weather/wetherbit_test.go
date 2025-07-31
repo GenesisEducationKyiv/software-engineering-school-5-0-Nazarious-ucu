@@ -3,12 +3,13 @@
 package weather_test
 
 import (
-	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+	"github.com/stretchr/testify/require"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/mock"

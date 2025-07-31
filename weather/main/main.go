@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/services/metrics"
 	"log"
 	"os/signal"
 	"syscall"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/services/metrics"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 
