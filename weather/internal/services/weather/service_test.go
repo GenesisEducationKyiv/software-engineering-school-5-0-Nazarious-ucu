@@ -3,8 +3,7 @@ package weather
 import (
 	"context"
 	"errors"
-	"io"
-	"log"
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 	"testing"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/models"
@@ -37,8 +36,6 @@ func TestServiceProvider_GetByCity(t *testing.T) {
 	successWeatherModel := models.WeatherData{City: "Lviv", Temperature: 15, Condition: "Sunny"}
 	emptyModel := models.WeatherData{}
 
-	discardLogger := log.New(io.Discard, "", 0)
-
 	t.Run("Success", func(t *testing.T) {
 		mock1 := mockAPIClient{}
 		mock2 := mockAPIClient{}
@@ -50,7 +47,10 @@ func TestServiceProvider_GetByCity(t *testing.T) {
 			mock2.AssertNumberOfCalls(t, "Fetch", 0)
 		})
 
-		provider := NewService(discardLogger, &mock1, &mock2)
+		l, err := logger.NewLogger("", "weather_test_success")
+		require.NoError(t, err)
+
+		provider := NewService(l, &mock1, &mock2)
 
 		result, err := provider.GetByCity(ctx, "Lviv")
 
@@ -70,7 +70,11 @@ func TestServiceProvider_GetByCity(t *testing.T) {
 			mock1.AssertExpectations(t)
 			mock2.AssertExpectations(t)
 		})
-		provider := NewService(discardLogger, &mock1, &mock2)
+
+		l, err := logger.NewLogger("", "weather_test_first_fails_second_success")
+		require.NoError(t, err)
+
+		provider := NewService(l, &mock1, &mock2)
 
 		result, err := provider.GetByCity(ctx, "Lviv")
 
@@ -91,7 +95,10 @@ func TestServiceProvider_GetByCity(t *testing.T) {
 			mock2.AssertExpectations(t)
 		})
 
-		provider := NewService(discardLogger, &mock1, &mock2)
+		l, err := logger.NewLogger("", "weather_test_all_fails")
+		require.NoError(t, err)
+
+		provider := NewService(l, &mock1, &mock2)
 
 		result, err := provider.GetByCity(ctx, "Lviv")
 
