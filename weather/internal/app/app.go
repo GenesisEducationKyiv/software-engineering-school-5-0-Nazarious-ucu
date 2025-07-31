@@ -54,7 +54,7 @@ func New(cfg config.Config, logger zerolog.Logger, met *metricsSvc.Metrics) *App
 
 // Start initializes services, applies logging & metrics middleware, and waits for shutdown.
 func (a *App) Start(ctx context.Context) error {
-	srvContainer := a.init(ctx)
+	srvContainer := a.init()
 
 	a.l.Info().
 		Str("grpc_port", a.cfg.Server.GrpcPort).
@@ -105,7 +105,7 @@ func (a *App) Shutdown(srvContainer ServiceContainer) error {
 }
 
 // init sets up logging, caching, metrics, HTTP & gRPC servers without starting them.
-func (a *App) init(ctx context.Context) ServiceContainer {
+func (a *App) init() ServiceContainer {
 	a.l.Info().Msgf("initializing weather service with config: %+v", a.cfg)
 
 	// Redis cache client + metrics decorator
@@ -127,7 +127,11 @@ func (a *App) init(ctx context.Context) ServiceContainer {
 		RepeatNumber: a.cfg.Breaker.RepeatNumber,
 	}
 	openWeather := serviceWeather.NewBreakerClient("OpenWeather", breakerCfg, a.l,
-		serviceWeather.NewClientOpenWeatherMap(a.cfg.OpenWeatherMapAPIKey, a.cfg.OpenWeatherMapURL, httpLogClient, a.l),
+		serviceWeather.NewClientOpenWeatherMap(
+			a.cfg.OpenWeatherMapAPIKey,
+			a.cfg.OpenWeatherMapURL,
+			httpLogClient,
+			a.l),
 	)
 	weatherAPI := serviceWeather.NewBreakerClient("WeatherAPI", breakerCfg, a.l,
 		serviceWeather.NewClientWeatherAPI(a.cfg.WeatherAPIKey, a.cfg.WeatherAPIURL, httpLogClient, a.l),
@@ -145,7 +149,9 @@ func (a *App) init(ctx context.Context) ServiceContainer {
 
 	// Metrics for cache and service
 	cacheMetrics := cache.NewMetricsDecorator[models.WeatherData](
-		cache.NewRedisClient[models.WeatherData](redisClient, a.l, time.Duration(a.cfg.Redis.LiveTime)*time.Hour),
+		cache.NewRedisClient[models.WeatherData](redisClient,
+			a.l,
+			time.Duration(a.cfg.Redis.LiveTime)*time.Hour),
 		metricsSvc.NewPromCollector(),
 	)
 	weatherService := decorators.NewCachedService(rawService, cacheMetrics, a.l)

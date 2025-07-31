@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +10,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"google.golang.org/grpc"
 )
+
+const divisor = 100
 
 // Metrics holds Prometheus metric vectors for the weather service.
 type Metrics struct {
@@ -63,13 +66,13 @@ func NewMetrics(serviceName string) *Metrics {
 			[]string{"city", "error_type"},
 		),
 
-		//ServiceUptime: prometheus.NewGauge(
+		// ServiceUptime: prometheus.NewGauge(
 		//	prometheus.GaugeOpts{
 		//		Namespace: serviceName,
 		//		Name:      "service_uptime_seconds",
 		//		Help:      "Service uptime in seconds",
 		//	},
-		//),
+		// ),
 	}
 
 	// register
@@ -116,7 +119,8 @@ func (m *Metrics) HTTPMiddleware() gin.HandlerFunc {
 		m.WeatherRequestsTotal.WithLabelValues(city).Inc()
 		if statusClass == "5xx" {
 			m.WeatherErrorsTotal.WithLabelValues(city, "server_error").Inc()
-		} else if statusClass == "4xx" {
+		}
+		if statusClass == "4xx" {
 			m.WeatherErrorsTotal.WithLabelValues(city, "client_error").Inc()
 		}
 	}
@@ -133,16 +137,5 @@ func (m *Metrics) StreamInterceptor() grpc.StreamServerInterceptor {
 }
 
 func getStatusClass(code int) string {
-	switch {
-	case code >= 200 && code < 300:
-		return "2xx"
-	case code >= 300 && code < 400:
-		return "3xx"
-	case code >= 400 && code < 500:
-		return "4xx"
-	case code >= 500:
-		return "5xx"
-	default:
-		return "unknown"
-	}
+	return fmt.Sprintf("%dxx", code/divisor)
 }

@@ -60,7 +60,7 @@ func (b *BreakerClient) Fetch(ctx context.Context, city string) (models.WeatherD
 			Dur("duration_ms", duration).
 			Err(err).
 			Msg("circuit breaker: request failed")
-		return models.WeatherData{}, fmt.Errorf("%s unavailable: %w", err)
+		return models.WeatherData{}, err
 	}
 
 	res, ok := result.(models.WeatherData)
@@ -71,7 +71,7 @@ func (b *BreakerClient) Fetch(ctx context.Context, city string) (models.WeatherD
 			Str("city", city).
 			Dur("duration_ms", duration).
 			Msg("circuit breaker: unexpected result type")
-		return models.WeatherData{}, fmt.Errorf("returned unexpected result")
+		return models.WeatherData{}, fmt.Errorf("returned unexpected result type: %T", result)
 	}
 
 	b.logger.Info().
