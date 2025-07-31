@@ -4,7 +4,10 @@ go 1.24.5
 
 replace github.com/Nazarious-ucu/weather-subscription-api/protos => ../protos
 
+replace github.com/Nazarious-ucu/weather-subscription-api/pkg => ../pkg
+
 require (
+	github.com/Nazarious-ucu/weather-subscription-api/pkg v0.0.0-00010101000000-000000000000
 	github.com/Nazarious-ucu/weather-subscription-api/protos v0.0.0-00010101000000-000000000000
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/joho/godotenv v1.5.1
@@ -34,7 +37,6 @@ require (
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/swaggo/files v1.0.1 // indirect
-	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.25.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sync v0.15.0 // indirect
@@ -44,5 +46,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20250707201910-8d1bb00bc6a7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
