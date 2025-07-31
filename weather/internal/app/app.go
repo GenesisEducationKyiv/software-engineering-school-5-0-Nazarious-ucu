@@ -54,7 +54,7 @@ func New(cfg config.Config, logger zerolog.Logger, met *metricsSvc.Metrics) *App
 
 // Start initializes services, applies logging & metrics middleware, and waits for shutdown.
 func (a *App) Start(ctx context.Context) error {
-	srvContainer := a.init()
+	srvContainer := a.init(ctx)
 
 	a.l.Info().
 		Str("grpc_port", a.cfg.Server.GrpcPort).
@@ -105,7 +105,7 @@ func (a *App) Shutdown(srvContainer ServiceContainer) error {
 }
 
 // init sets up logging, caching, metrics, HTTP & gRPC servers without starting them.
-func (a *App) init() ServiceContainer {
+func (a *App) init(ctx context.Context) ServiceContainer {
 	a.l.Info().Msgf("initializing weather service with config: %+v", a.cfg)
 
 	// Redis cache client + metrics decorator
@@ -176,9 +176,11 @@ func (a *App) init() ServiceContainer {
 
 	// Start gRPC server
 	addrGrpc := a.cfg.Server.Host + ":" + a.cfg.Server.GrpcPort
+	lc := net.ListenConfig{}
+
 	go func() {
 		a.l.Info().Str("address", addrGrpc).Msg("gRPC server running")
-		l, lErr := net.Listen("tcp", addrGrpc)
+		l, lErr := lc.Listen(ctx, "tcp", addrGrpc)
 		if lErr != nil {
 			a.l.Error().Err(lErr).Msg("failed to listen on gRPC port")
 			return
