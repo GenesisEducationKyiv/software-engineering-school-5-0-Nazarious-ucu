@@ -7,6 +7,7 @@ replace github.com/Nazarious-ucu/weather-subscription-api/protos => ../protos
 require (
 	github.com/Nazarious-ucu/weather-subscription-api/protos v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.10.1
+	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/prometheus/client_golang v1.22.0
