@@ -59,19 +59,19 @@ type ServiceContainer struct {
 	Srv        *http.Server
 	Db         *sql.DB
 	fileLogger *zap.Logger
+	M          *metrics.Metrics
 }
 
 type App struct {
 	cfg config.Config
 	l   zerolog.Logger
-	m   *metrics.Metrics
 }
 
-func New(cfg config.Config, logger zerolog.Logger, m *metrics.Metrics) *App {
+func New(cfg config.Config, logger zerolog.Logger) *App {
 	// Enrich logger with service name and timestamp
 	logger = logger.With().Str("service", "subscription-service").Timestamp().Logger()
 	logger.Info().Msg("Logger initialized for subscription-service")
-	return &App{cfg: cfg, l: logger, m: m}
+	return &App{cfg: cfg, l: logger}
 }
 
 func (a *App) Start(ctx context.Context) error {
@@ -91,7 +91,7 @@ func (a *App) Start(ctx context.Context) error {
 	// Insert metrics middleware into router
 	srvContainer.Router.Use(gin.Recovery(), func(c *gin.Context) {
 		// Proxy to metrics middleware
-		a.m.HTTPMiddleware()(c)
+		srvContainer.M.HTTPMiddleware()(c)
 	})
 
 	// Register HTTP endpoints
@@ -168,6 +168,8 @@ func (a *App) init() ServiceContainer {
 		a.l.Error().Err(err).Msg("DB migration error")
 	}
 
+	m := metrics.NewMetrics("subscription_service", db, a.cfg.DB.Source)
+
 	// Gin router
 	router := gin.New()
 
@@ -202,7 +204,7 @@ func (a *App) init() ServiceContainer {
 		a.l.Error().Err(err).Msg("Weather gRPC dial error")
 	}
 	weatherClient := weatherpb.NewWeatherServiceClient(grpcConn)
-	weatherSvc := weather.NewGrpcWeatherAdapter(weatherClient, a.l)
+	weatherSvc := weather.NewGrpcWeatherAdapter(weatherClient, a.l, m)
 
 	// Notifier
 	n := notifier.New(repo, weatherSvc, producer, a.l,
@@ -212,8 +214,8 @@ func (a *App) init() ServiceContainer {
 
 	// gRPC server with metrics interceptors
 	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(a.m.UnaryServerInterceptor()),
-		grpc.StreamInterceptor(a.m.StreamServerInterceptor()),
+		grpc.UnaryInterceptor(m.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(m.StreamServerInterceptor()),
 	)
 	subs.RegisterSubscriptionServiceServer(grpcServer, grpc2.NewSubscriptionGRPCServer(subSvc))
 

@@ -32,14 +32,14 @@ func NewGrpcWeatherAdapter(
 func (g *GrpcWeatherAdapter) GetByCity(ctx context.Context, city string) (models.WeatherData, error) {
 	start := time.Now()
 
-	g.logger.Debug().Str("city", city).Msg("calling weather service gRPC method GetByCity")
+	g.logger.Debug().Ctx(ctx).Str("city", city).Msg("calling weather service gRPC method GetByCity")
 
 	resp, err := g.inner.GetByCity(ctx, &weatherpb.WeatherRequest{City: city})
 	dur := time.Since(start)
 
 	if err != nil {
 		// log error with context
-		g.logger.Error().Err(err).
+		g.logger.Error().Err(err).Ctx(ctx).
 			Str("city", city).
 			Dur("duration", dur).
 			Msg("weather gRPC call failed")
@@ -47,7 +47,7 @@ func (g *GrpcWeatherAdapter) GetByCity(ctx context.Context, city string) (models
 	}
 
 	// on success
-	g.logger.Info().
+	g.logger.Info().Ctx(ctx).
 		Str("city", city).
 		Dur("duration", dur).
 		Msg("weather gRPC call succeeded")

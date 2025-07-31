@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/metrics"
 	"log"
 	"os/signal"
 	"syscall"
@@ -32,9 +31,7 @@ func main() {
 
 	l, err := logger.NewLogger("logs/subscriptions.log", "subscriptions")
 
-	metr := metrics.NewMetrics("subscription")
-
-	application := app.New(*cfg, l, metr)
+	application := app.New(*cfg, l)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

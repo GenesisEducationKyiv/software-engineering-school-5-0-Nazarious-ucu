@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -41,7 +42,7 @@ type Metrics struct {
 }
 
 // NewMetrics creates and registers all metrics under the given namespace.
-func NewMetrics(namespace string) *Metrics {
+func NewMetrics(namespace string, db *sql.DB, dbName string) *Metrics {
 	registry := prometheus.NewRegistry()
 	m := &Metrics{
 		HTTPRequestsTotal: prometheus.NewCounterVec(
@@ -150,11 +151,12 @@ func NewMetrics(namespace string) *Metrics {
 		// m.Goroutines,
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+		collectors.NewDBStatsCollector(db, dbName),
 	)
 
 	// gRPC server metrics
 	grpcProm.EnableHandlingTimeHistogram()
-	//grpcProm.Register(srv)
+	// grpcProm.Register(srv)
 
 	// initialize uptime and goroutines
 	m.ServiceUptime.SetToCurrentTime()
