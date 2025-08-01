@@ -5,11 +5,12 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/metrics"
-	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 	"log"
 	"testing"
 	"time"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/metrics"
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 
 	"github.com/wagslane/go-rabbitmq"
 
