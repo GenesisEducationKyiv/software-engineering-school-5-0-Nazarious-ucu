@@ -38,12 +38,16 @@ type Metrics struct {
 
 	// System metrics
 	ServiceUptime prometheus.Gauge
-	// Goroutines    prometheus.Gauge
+
+	// Errors metrics
+	BusinessErrors  *prometheus.CounterVec
+	TechnicalErrors *prometheus.CounterVec
 }
 
 // NewMetrics creates and registers all metrics under the given namespace.
 func NewMetrics(namespace string, db *sql.DB, dbName string) *Metrics {
 	registry := prometheus.NewRegistry()
+	errorLabels := []string{"error_type", "severity"}
 	m := &Metrics{
 		HTTPRequestsTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -134,6 +138,24 @@ func NewMetrics(namespace string, db *sql.DB, dbName string) *Metrics {
 		//		Help:      "Current goroutine count",
 		//	},
 		// ),
+
+		BusinessErrors: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: namespace,
+				Name:      "business_errors_total",
+				Help:      "Total business errors",
+			},
+			errorLabels,
+		),
+
+		TechnicalErrors: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: namespace,
+				Name:      "technical_errors_total",
+				Help:      "Total technical errors",
+			},
+			errorLabels,
+		),
 	}
 
 	// register to default registry

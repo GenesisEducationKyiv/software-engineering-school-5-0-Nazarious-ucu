@@ -60,7 +60,7 @@ func (p *Producer) Publish(
 			Msg("failed to publish message")
 
 		// record a publishing failure metric, if desired
-		// p.m.TechnicalErrors.WithLabelValues("rabbitmq_publish", err.Error(), "critical").Inc()
+		p.m.TechnicalErrors.WithLabelValues("rabbitmq_publish", "critical").Inc()
 		return err
 	}
 
@@ -69,8 +69,7 @@ func (p *Producer) Publish(
 		Dur("duration", dur).
 		Msg("message published successfully")
 
-	// record a successful publish metric, if desired
-	// p.m.BusinessErrors.WithLabelValues("rabbitmq_publish_success", "", "info").Inc()
+	p.m.RabbitPublishTotal.WithLabelValues("rabbitmq_publish", "success").Inc()
 
 	return nil
 }
