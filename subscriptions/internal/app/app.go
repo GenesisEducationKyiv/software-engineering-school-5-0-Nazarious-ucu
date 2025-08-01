@@ -92,7 +92,7 @@ func (a *App) Start(ctx context.Context) error {
 	})
 
 	// Register HTTP endpoints
-	subHandler := http2.NewHandler(srvContainer.SubscriptionService)
+	subHandler := http2.NewHandler(srvContainer.SubscriptionService, a.l, srvContainer.M)
 
 	srvContainer.Router.POST("/subscribe", subHandler.Subscribe)
 	srvContainer.Router.GET("/confirm/:token", subHandler.Confirm)
@@ -241,6 +241,7 @@ func (a *App) init() ServiceContainer {
 		Router:              router,
 		Srv:                 httpSrv,
 		Db:                  db,
+		M:                   m,
 	}
 }
 
