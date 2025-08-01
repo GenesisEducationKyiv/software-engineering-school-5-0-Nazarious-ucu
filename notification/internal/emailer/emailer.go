@@ -17,11 +17,11 @@ type SMTPService struct {
 	password string
 	From     string
 	logger   zerolog.Logger
-	m        metrics.Metrics
+	m        *metrics.Metrics
 }
 
 // NewSMTPService creates an SMTPService with a scoped logger and metrics.
-func NewSMTPService(cfg *config.Config, logger zerolog.Logger, m metrics.Metrics) *SMTPService {
+func NewSMTPService(cfg *config.Config, logger zerolog.Logger, m *metrics.Metrics) *SMTPService {
 	logger = logger.With().Str("component", "SMTPService").Logger()
 	return &SMTPService{
 		user:     cfg.Email.User,

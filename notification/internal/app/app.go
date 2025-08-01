@@ -32,7 +32,7 @@ func (a *App) Start(ctx context.Context) error {
 	a.l.Info().Msg("Starting notification service")
 
 	// SMTP/email setup
-	smtpSvc := emailer.NewSMTPService(&a.cfg, a.l)
+	smtpSvc := emailer.NewSMTPService(&a.cfg, a.l, a.m)
 	a.l.Info().
 		Interface("email_cfg", a.cfg.Email).
 		Msg("SMTP service configured")
