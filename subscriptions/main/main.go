@@ -30,7 +30,6 @@ func main() {
 	}
 
 	l, err := logger.NewLogger("logs/subscriptions.log", "subscriptions")
-
 	if err != nil {
 		log.Panicf("failed to initialize logger: %v", err)
 	}
