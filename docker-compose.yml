@@ -10,7 +10,6 @@ services:
       - .env
     networks:
       - default
-      - redis
 
   sub:
     build:
@@ -38,6 +37,7 @@ services:
     restart: on-failure
     ports:
       - "8081:${GATEWAY_SERVER_PORT:-8081}"
+      - "8085:8085"
     env_file:
       - .env
     depends_on:

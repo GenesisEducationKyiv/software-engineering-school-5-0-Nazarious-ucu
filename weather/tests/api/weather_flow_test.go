@@ -54,7 +54,7 @@ func TestWeatherService_GetByCity(t *testing.T) {
 			name:     "invalid city",
 			city:     "InvalidCity",
 			wantResp: nil,
-			wantErr:  "all weather API clients failed to fetch data",
+			wantErr:  "all weather API clients failed",
 		},
 	}
 

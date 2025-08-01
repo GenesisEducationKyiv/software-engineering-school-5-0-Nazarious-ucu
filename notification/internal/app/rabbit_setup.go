@@ -10,11 +10,11 @@ func (a *App) setupConn() (*rabbitmq.Conn, error) {
 		a.cfg.RabbitMQ.Address(),
 	)
 	if err != nil {
-		a.log.Printf("Failed to connect to RabbitMQ: %v", err)
+		a.l.Printf("Failed to connect to RabbitMQ: %v", err)
 		return nil, err
 	}
 
-	a.log.Println("Connected to RabbitMQ successfully")
+	a.l.Println("Connected to RabbitMQ successfully")
 	return conn, nil
 }
 

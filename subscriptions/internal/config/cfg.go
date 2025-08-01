@@ -27,8 +27,8 @@ type Db struct {
 }
 
 type NotifierFrequency struct {
-	DailyFrequency  string `envconfig:"NOTIFIER_FREQUENCY" default:"0 0 9 * *"`
-	HourlyFrequency string `envconfig:"NOTIFIER_HOURLY_FREQUENCY" default:"0 * * * *"`
+	DailyFrequency  string `envconfig:"NOTIFIER_FREQUENCY" default:"0 0 9 * * *"`
+	HourlyFrequency string `envconfig:"NOTIFIER_HOURLY_FREQUENCY" default:"0 * * * * *"`
 }
 
 type Config struct {

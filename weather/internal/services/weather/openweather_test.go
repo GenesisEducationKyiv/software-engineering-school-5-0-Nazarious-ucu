@@ -4,10 +4,12 @@ package weather_test
 
 import (
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+	"github.com/stretchr/testify/require"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/mock"
@@ -46,7 +48,12 @@ func Test_OpenWeather_GetByCity_Success(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewClientOpenWeatherMap("1234567890", "", m, log.Default())
+	// Initialize the OpenWeatherMap client with the mock HTTP client
+	l, err := logger.NewLogger("", "openweather_test_success")
+	if err != nil {
+		t.Fatalf("failed to create logger: %v", err)
+	}
+	weatherAPIClient := weather.NewClientOpenWeatherMap("1234567890", "", m, l)
 
 	data, err := weatherAPIClient.Fetch(ctx, "London")
 	assert.NoError(t, err)
@@ -70,7 +77,10 @@ func Test_OpenWeatherGetByCity_CityNotFound(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, log.Default())
+	l, err := logger.NewLogger("", "openweather_test_city_not_found")
+	require.NoError(t, err)
+
+	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, l)
 
 	data, err := weatherAPIClient.Fetch(ctx, "UnknownCity")
 	assert.Error(t, err)
@@ -92,7 +102,10 @@ func Test_OpenWeatherGetByCity_APIError(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, log.Default())
+	l, err := logger.NewLogger("", "openweather_test_api_error")
+	require.NoError(t, err)
+
+	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, l)
 
 	data, err := weatherAPIClient.Fetch(ctx, "London")
 	assert.Error(t, err)
@@ -114,7 +127,10 @@ func Test_OpenWeatherGetByCity_InvalidAPIKey(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, log.Default())
+	l, err := logger.NewLogger("", "openweather_test_invalid_api_key")
+	require.NoError(t, err)
+
+	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, l)
 
 	data, err := weatherAPIClient.Fetch(ctx, "London")
 	assert.Error(t, err)

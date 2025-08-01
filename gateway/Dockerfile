@@ -5,6 +5,7 @@ WORKDIR /app
 COPY gateway/ ./gateway
 COPY .env .env
 COPY protos/ ./protos
+COPY pkg/ ./pkg
 
 WORKDIR /app/gateway
 

@@ -101,7 +101,7 @@ func TestPostSubscribe(t *testing.T) {
 			bodyString := string(bodyBytes)
 
 			// Check if the body matches the expected response
-			assert.Equalf(t, bodyString, tc.wantBody, "Expected body %s, got %s", tc.wantBody, bodyString)
+			assert.Equalf(t, tc.wantBody, bodyString, "Expected body %s, got %s", tc.wantBody, bodyString)
 
 			subscription := FetchSubscription(t, tc.wantDataInDatabase["email"].(string), //nolint:errcheck
 				tc.wantDataInDatabase["city"].(string)) //nolint:errcheck

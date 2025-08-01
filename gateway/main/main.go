@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/gateway/internal/cfg"
 	"github.com/joho/godotenv"
@@ -26,7 +28,10 @@ func main() {
 		log.Panicf("failed to load configuration: %v", err)
 	}
 
-	l := log.New(log.Writer(), "WeatherSubscriptionAPI: ", log.LstdFlags)
+	l, err := logger.NewLogger(config.LogsPath, "gateway")
+	if err != nil {
+		panic("cannot initialize logger: " + err.Error())
+	}
 
 	application := app.New(*config, l)
 

@@ -2,82 +2,91 @@ package app
 
 import (
 	"context"
-	"log"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/config"
 	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/consumer"
 	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/emailer"
+	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/metrics"
 	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/services/email"
+	"github.com/rs/zerolog"
 )
 
-type ServiceContainer struct {
-	EmailService *email.Service
-}
-
+// App is the notification application.
 type App struct {
 	cfg config.Config
-	log *log.Logger
+	l   zerolog.Logger
+	m   *metrics.Metrics
 }
 
-func New(cfg config.Config, logger *log.Logger) *App {
-	return &App{
-		cfg: cfg,
-		log: logger,
-	}
+// New constructs the App with config, structured logger, and metrics.
+func New(cfg config.Config, logger zerolog.Logger, m *metrics.Metrics) *App {
+	logger = logger.With().
+		Str("component", "App").
+		Logger()
+	logger.Info().Msg("App initialized")
+	return &App{cfg: cfg, l: logger, m: m}
 }
 
+// Start launches both consumers and blocks until ctx is done.
 func (a *App) Start(ctx context.Context) error {
-	a.log.Println("Starting application...")
-	// ctxWithTimeout, cancel := context.WithTimeout(ctx, timeoutDuration)
-	// defer cancel()
+	a.l.Info().Msg("Starting notification service")
 
-	smtpService := emailer.NewSMTPService(&a.cfg, a.log)
-	a.log.Printf("Initializing SMTP service with config: %+v\n", a.cfg.Email)
-	emailService := email.NewService(smtpService, a.cfg.TemplatesDir)
+	// SMTP/email setup
+	smtpSvc := emailer.NewSMTPService(&a.cfg, a.l, a.m)
+	a.l.Info().
+		Interface("email_cfg", a.cfg.Email).
+		Msg("SMTP service configured")
+	emailSvc := email.NewService(smtpSvc, a.cfg.TemplatesDir)
 
-	rabbitConn, err := a.setupConn()
+	// RabbitMQ connection
+	conn, err := a.setupConn()
 	if err != nil {
-		a.log.Printf("Failed to connect to RabbitMQ: %v", err)
+		a.l.Error().Err(err).Msg("RabbitMQ connection failed")
+		a.m.ConsumerErrorsTotal.WithLabelValues("connection", err.Error()).Inc()
 		return err
 	}
 
-	subscribeEventConsumer, err := a.setupSubscribeEventConsumer(rabbitConn)
+	// subscription-confirmation consumer
+	subCons, err := a.setupSubscribeEventConsumer(conn)
 	if err != nil {
-		a.log.Printf("Failed to setup subscribe event consumer: %v", err)
+		a.l.Error().Err(err).Msg("Subscribe consumer setup failed")
+		a.m.ConsumerErrorsTotal.WithLabelValues("subscribe_setup", err.Error()).Inc()
 		return err
 	}
-	defer subscribeEventConsumer.Close()
+	defer subCons.Close()
 
-	weatherEventConsumer, err := a.setupWeatherConsumer(rabbitConn)
+	// weather-notify consumer
+	weatherCons, err := a.setupWeatherConsumer(conn)
 	if err != nil {
-		a.log.Printf("Failed to setup weather consumer: %v", err)
+		a.l.Error().Err(err).Msg("Weather consumer setup failed")
+		a.m.ConsumerErrorsTotal.WithLabelValues("weather_setup", err.Error()).Inc()
 		return err
 	}
-	defer weatherEventConsumer.Close()
+	defer weatherCons.Close()
 
-	customConsumer := consumer.NewConsumer(emailService, a.log)
+	// our processing logic
+	consumerLogic := consumer.NewConsumer(emailSvc, a.l, a.m)
+
+	// start weather consumer loop
 	go func() {
-		// defer wg.Done()
-		if err := weatherEventConsumer.Run(customConsumer.ReceiveWeather); err != nil {
-			a.log.Printf("weather consumer stopped: %v", err)
+		a.l.Info().Msg("Weather consumer starting")
+		if err := weatherCons.Run(consumerLogic.ReceiveWeather); err != nil {
+			a.l.Error().Err(err).Msg("Weather consumer stopped")
+			a.m.ConsumerErrorsTotal.WithLabelValues("weather_run", err.Error()).Inc()
 		}
 	}()
 
-	// 4) Launch subscribe consumer
+	// start subscription-confirm consumer loop
 	go func() {
-		// defer wg.Done()
-		if err := subscribeEventConsumer.Run(customConsumer.ReceiveSubscription); err != nil {
-			a.log.Printf("subscribe consumer stopped: %v", err)
+		a.l.Info().Msg("Subscribe consumer starting")
+		if err := subCons.Run(consumerLogic.ReceiveSubscription); err != nil {
+			a.l.Error().Err(err).Msg("Subscribe consumer stopped")
+			a.m.ConsumerErrorsTotal.WithLabelValues("subscribe_run", err.Error()).Inc()
 		}
 	}()
-	a.log.Println("Application started successfully ")
 
+	a.l.Info().Msg("Notification service started")
 	<-ctx.Done()
-
-	// if err := a.Stop(srvContainer); err != nil {
-	//	a.log.Fatalf("failed to shutdown application: %v", err)
-	//	return err
-	// }
-	a.log.Println("Application shutdown successfully")
+	a.l.Info().Msg("Shutdown signal received")
 	return nil
 }

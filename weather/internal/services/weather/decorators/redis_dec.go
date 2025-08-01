@@ -3,9 +3,9 @@ package decorators
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/models"
+	"github.com/rs/zerolog"
 )
 
 type weatherGetterService interface {
@@ -20,13 +20,13 @@ type cacheClient[T any] interface {
 type CachedService struct {
 	inner  weatherGetterService
 	cache  cacheClient[models.WeatherData]
-	logger *log.Logger
+	logger zerolog.Logger
 }
 
 func NewCachedService(
 	inner weatherGetterService,
 	cache cacheClient[models.WeatherData],
-	logger *log.Logger,
+	logger zerolog.Logger,
 ) *CachedService {
 	return &CachedService{inner: inner, cache: cache, logger: logger}
 }
@@ -35,20 +35,42 @@ func (s *CachedService) GetByCity(ctx context.Context, city string) (models.Weat
 	key := fmt.Sprintf("weather:%s", city)
 	var weather models.WeatherData
 
-	if weather, err := s.cache.Get(ctx, key); err == nil {
-		s.logger.Printf("Cache hit for city %s", city)
+	// Try cache
+	weather, err := s.cache.Get(ctx, key)
+	if err == nil {
+		s.logger.Info().
+			Ctx(ctx).
+			Str("city", city).
+			Str("key", key).
+			Msg("cache hit")
 		return weather, nil
 	}
+	s.logger.Info().
+		Ctx(ctx).
+		Str("city", city).
+		Str("key", key).
+		Err(err).
+		Msg("cache miss")
 
-	s.logger.Printf("Cache miss for city %s", city)
-	weather, err := s.inner.GetByCity(ctx, city)
+	// Fallback to inner service
+	weather, err = s.inner.GetByCity(ctx, city)
 	if err != nil {
+		s.logger.Error().
+			Ctx(ctx).
+			Str("city", city).
+			Err(err).
+			Msg("inner service failed")
 		return models.WeatherData{}, err
 	}
 
-	err = s.cache.Set(ctx, key, weather)
-	if err != nil {
-		s.logger.Printf("Cache error %s for city %s", err, city)
+	// Populate cache
+	if err := s.cache.Set(ctx, key, weather); err != nil {
+		s.logger.Error().
+			Ctx(ctx).
+			Str("city", city).
+			Str("key", key).
+			Err(err).
+			Msg("cache set failed")
 	}
 
 	return weather, nil
