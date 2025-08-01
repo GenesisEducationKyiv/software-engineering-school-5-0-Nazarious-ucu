@@ -76,14 +76,14 @@ func (n *Notifier) Start(ctx context.Context) {
 	// Schedule hourly job
 	if _, err := n.cron.AddFunc(n.hourlySpec, func() { n.RunDue(ctx, freqHourly) }); err != nil {
 		n.logger.Error().Err(err).Msg("failed to schedule hourly job")
-		n.m.TechnicalErrors.WithLabelValues("cron_schedule_error", err.Error(), "critical").Inc()
+		n.m.TechnicalErrors.WithLabelValues("cron_schedule_error", "critical").Inc()
 		return
 	}
 
 	// Schedule daily job
 	if _, err := n.cron.AddFunc(n.dailySpec, func() { n.RunDue(ctx, freqDaily) }); err != nil {
 		n.logger.Error().Err(err).Msg("failed to schedule daily job")
-		n.m.TechnicalErrors.WithLabelValues("cron_schedule_error", err.Error(), "critical").Inc()
+		n.m.TechnicalErrors.WithLabelValues("cron_schedule_error", "critical").Inc()
 		return
 	}
 
@@ -116,7 +116,7 @@ func (n *Notifier) RunDue(ctx context.Context, frequency string) {
 		n.logger.Error().Err(err).
 			Str("frequency", frequency).
 			Msg("error fetching due subscriptions")
-		n.m.TechnicalErrors.WithLabelValues("fetch_due_subs", err.Error(), "critical").Inc()
+		n.m.TechnicalErrors.WithLabelValues("fetch_due_subs", "critical").Inc()
 		return
 	}
 	n.logger.Info().Str("frequency", frequency).Int("count", len(subs)).Msg("fetched due subscriptions")
@@ -133,7 +133,7 @@ func (n *Notifier) RunDue(ctx context.Context, frequency string) {
 				n.logger.Error().Err(err).
 					Int("subscription_id", s.ID).
 					Msg("error sending update")
-				n.m.TechnicalErrors.WithLabelValues("send_one", err.Error(), "critical").Inc()
+				n.m.TechnicalErrors.WithLabelValues("send_one", "critical").Inc()
 			}
 		}()
 	}
@@ -157,7 +157,7 @@ func (n *Notifier) SendOne(ctx context.Context, sub models.Subscription) error {
 		n.logger.Error().Err(err).
 			Int("subscription_id", sub.ID).
 			Msg("weather fetch error")
-		n.m.TechnicalErrors.WithLabelValues("weather_fetch_error", err.Error(), "critical").Inc()
+		n.m.TechnicalErrors.WithLabelValues("weather_fetch_error", "critical").Inc()
 		return err
 	}
 
@@ -166,7 +166,7 @@ func (n *Notifier) SendOne(ctx context.Context, sub models.Subscription) error {
 		n.logger.Error().Err(err).
 			Str("email", sub.Email).
 			Msg("email send error")
-		n.m.TechnicalErrors.WithLabelValues("email_send_error", err.Error(), "critical").Inc()
+		n.m.TechnicalErrors.WithLabelValues("email_send_error", "critical").Inc()
 		return err
 	}
 
@@ -175,7 +175,7 @@ func (n *Notifier) SendOne(ctx context.Context, sub models.Subscription) error {
 		n.logger.Error().Err(err).
 			Int("subscription_id", sub.ID).
 			Msg("failed to update last_sent")
-		n.m.TechnicalErrors.WithLabelValues("db_update_error", err.Error(), "critical").Inc()
+		n.m.TechnicalErrors.WithLabelValues("db_update_error", "critical").Inc()
 		return err
 	}
 

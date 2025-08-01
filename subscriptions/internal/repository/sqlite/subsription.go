@@ -48,7 +48,7 @@ func (r *SubscriptionRepository) Create(
 	if err != nil {
 		r.log.Error().Err(err).Ctx(ctx).
 			Msg("failed to query subscription count")
-		r.m.TechnicalErrors.WithLabelValues("db_query_error", err.Error(), "critical").Inc()
+		r.m.TechnicalErrors.WithLabelValues("db_query_error", "critical").Inc()
 		return err
 	}
 	if cnt > 0 {
@@ -76,7 +76,7 @@ func (r *SubscriptionRepository) Create(
 		r.log.Error().Err(err).Ctx(ctx).
 			Dur("duration", dur).
 			Msg("failed to insert subscription")
-		r.m.TechnicalErrors.WithLabelValues("db_insert_error", err.Error(), "critical").Inc()
+		r.m.TechnicalErrors.WithLabelValues("db_insert_error", "critical").Inc()
 		return err
 	}
 
@@ -101,7 +101,7 @@ func (r *SubscriptionRepository) Confirm(ctx context.Context, token string) (boo
 		r.log.Error().Err(err).Ctx(ctx).
 			Str("token", token).
 			Msg("failed to execute confirm update")
-		r.m.TechnicalErrors.WithLabelValues("db_update_error", err.Error(), "critical").Inc()
+		r.m.TechnicalErrors.WithLabelValues("db_update_error", "critical").Inc()
 		return false, err
 	}
 	count, err := res.RowsAffected()
@@ -109,7 +109,7 @@ func (r *SubscriptionRepository) Confirm(ctx context.Context, token string) (boo
 		r.log.Error().Err(err).Ctx(ctx).
 			Str("token", token).
 			Msg("failed to get rows affected for confirm")
-		r.m.TechnicalErrors.WithLabelValues("db_rows_error", err.Error(), "critical").Inc()
+		r.m.TechnicalErrors.WithLabelValues("db_rows_error", "critical").Inc()
 		return false, err
 	}
 
@@ -133,7 +133,7 @@ func (r *SubscriptionRepository) Unsubscribe(ctx context.Context, token string) 
 		r.log.Error().Err(err).Ctx(ctx).
 			Str("token", token).
 			Msg("failed to execute unsubscribe update")
-		r.m.TechnicalErrors.WithLabelValues("db_update_error", err.Error(), "critical").Inc()
+		r.m.TechnicalErrors.WithLabelValues("db_update_error", "critical").Inc()
 		return false, err
 	}
 	count, err := res.RowsAffected()
@@ -141,7 +141,7 @@ func (r *SubscriptionRepository) Unsubscribe(ctx context.Context, token string) 
 		r.log.Error().Err(err).Ctx(ctx).
 			Str("token", token).
 			Msg("failed to get rows affected for unsubscribe")
-		r.m.TechnicalErrors.WithLabelValues("db_rows_error", err.Error(), "critical").Inc()
+		r.m.TechnicalErrors.WithLabelValues("db_rows_error", "critical").Inc()
 		return false, err
 	}
 
@@ -165,7 +165,7 @@ func (r *SubscriptionRepository) UpdateLastSent(ctx context.Context, subscriptio
 		r.log.Error().Err(err).Ctx(ctx).
 			Int("subscription_id", subscriptionID).
 			Msg("failed to update last_sent timestamp")
-		r.m.TechnicalErrors.WithLabelValues("db_update_error", err.Error(), "critical").Inc()
+		r.m.TechnicalErrors.WithLabelValues("db_update_error", "critical").Inc()
 		return err
 	}
 
@@ -193,7 +193,7 @@ func (r *SubscriptionRepository) GetConfirmedByFrequency(
 		r.log.Error().Err(err).Ctx(ctx).
 			Str("frequency", frequency).
 			Msg("failed to query subscriptions by frequency")
-		r.m.TechnicalErrors.WithLabelValues("db_query_error", err.Error(), "critical").Inc()
+		r.m.TechnicalErrors.WithLabelValues("db_query_error", "critical").Inc()
 		return nil, err
 	}
 	defer func(rows *sql.Rows) {
@@ -202,7 +202,7 @@ func (r *SubscriptionRepository) GetConfirmedByFrequency(
 			r.log.Error().Err(err).Ctx(ctx).
 				Str("frequency", frequency).
 				Msg("failed to close rows after query")
-			r.m.TechnicalErrors.WithLabelValues("db_rows_close_error", err.Error(), "critical").Inc()
+			r.m.TechnicalErrors.WithLabelValues("db_rows_close_error", "critical").Inc()
 		} else {
 			r.log.Debug().Ctx(ctx).
 				Str("frequency", frequency).
@@ -218,7 +218,7 @@ func (r *SubscriptionRepository) GetConfirmedByFrequency(
 		if err := rows.Scan(&sub.ID, &sub.Email, &sub.City, &sub.Frequency, &lastSent); err != nil {
 			r.log.Error().Err(err).Ctx(ctx).
 				Msg("failed to scan subscription row")
-			r.m.TechnicalErrors.WithLabelValues("db_scan_error", err.Error(), "critical").Inc()
+			r.m.TechnicalErrors.WithLabelValues("db_scan_error", "critical").Inc()
 			return nil, err
 		}
 
@@ -231,7 +231,7 @@ func (r *SubscriptionRepository) GetConfirmedByFrequency(
 	if err := rows.Err(); err != nil {
 		r.log.Error().Err(err).Ctx(ctx).
 			Msg("row iteration error")
-		r.m.TechnicalErrors.WithLabelValues("db_rows_error", err.Error(), "critical").Inc()
+		r.m.TechnicalErrors.WithLabelValues("db_rows_error", "critical").Inc()
 		return nil, err
 	}
 

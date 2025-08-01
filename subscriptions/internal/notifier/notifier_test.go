@@ -4,9 +4,11 @@ package notifier_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
-	"io"
-	"log"
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/metrics"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 
@@ -86,8 +88,13 @@ func Test_sendOne_Success(t *testing.T) {
 		mockE.AssertExpectations(t)
 	})
 
-	n := notifier.New(mockR, mockW, mockE, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
-	err := n.SendOne(context.Background(), sub)
+	l, err := logger.NewLogger("logs/subscriptions_test.log", "notifier_test")
+	require.NoError(t, err)
+
+	m := metrics.NewMetrics("notifier_test", &sql.DB{}, "test")
+
+	n := notifier.New(mockR, mockW, mockE, l, "@every 1h", "0 0 9 * * *", m)
+	err = n.SendOne(context.Background(), sub)
 
 	assert.NoError(t, err)
 }
@@ -109,7 +116,12 @@ func Test_sendOne_Error_APIError(t *testing.T) {
 		em.AssertExpectations(t)
 	})
 
-	n1 := notifier.New(rm, wm, em, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
+	l, err := logger.NewLogger("logs/subscriptions_test.log", "notifier_test")
+	require.NoError(t, err)
+
+	m := metrics.NewMetrics("notifier_test", &sql.DB{}, "test")
+
+	n1 := notifier.New(rm, wm, em, l, "@every 1h", "0 0 9 * * *", m)
 	err1 := n1.SendOne(context.Background(), sub)
 	assert.Error(t, err1)
 }
@@ -132,8 +144,13 @@ func Test_sendOne_Error_EmailError(t *testing.T) {
 		em.AssertExpectations(t)
 	})
 
+	l, err := logger.NewLogger("logs/subscriptions_test.log", "notifier_test")
+	require.NoError(t, err)
+
+	m := metrics.NewMetrics("notifier_test", &sql.DB{}, "test")
+
 	// UpdateLastSent should not be called on send fail
-	n2 := notifier.New(rm, wm, em, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
+	n2 := notifier.New(rm, wm, em, l, "@every 1h", "0 0 9 * * *", m)
 	err2 := n2.SendOne(context.Background(), sub)
 	assert.Error(t, err2)
 }
@@ -164,7 +181,12 @@ func Test_runDue_Success(t *testing.T) {
 		em.AssertExpectations(t)
 	})
 
-	n := notifier.New(rm, wm, em, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
+	l, err := logger.NewLogger("logs/subscriptions_test.log", "notifier_test")
+	require.NoError(t, err)
+
+	m := metrics.NewMetrics("notifier_test", &sql.DB{}, "test")
+
+	n := notifier.New(rm, wm, em, l, "@every 1h", "0 0 9 * * *", m)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -177,7 +199,12 @@ func Test_runDue_FetchError(t *testing.T) {
 	mockE := &mockEmail{}
 	mockW := &mockWeather{}
 
-	n := notifier.New(mockR, mockW, mockE, log.New(io.Discard, "", 0), "@every 1h", "0 0 9 * * *")
+	l, err := logger.NewLogger("logs/subscriptions_test.log", "notifier_test")
+	require.NoError(t, err)
+
+	m := metrics.NewMetrics("notifier_test", &sql.DB{}, "test")
+
+	n := notifier.New(mockR, mockW, mockE, l, "@every 1h", "0 0 9 * * *", m)
 
 	mockR.On("GetConfirmedByFrequency", freqTest, mock.Anything).
 		Return([]models.Subscription{}, errors.New("db down"))

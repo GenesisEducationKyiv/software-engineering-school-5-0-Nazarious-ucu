@@ -59,7 +59,7 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 			Msg("method not allowed")
 
 		h.m.BusinessErrors.
-			WithLabelValues("method_not_allowed", "405", "warning").
+			WithLabelValues("method_not_allowed", "warning").
 			Inc()
 
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -98,7 +98,7 @@ func (h *Handler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 			Msg("missing required subscription fields")
 
 		h.m.BusinessErrors.
-			WithLabelValues("validation_error", "missing_fields", "warning").
+			WithLabelValues("validation_error", "warning").
 			Inc()
 
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
