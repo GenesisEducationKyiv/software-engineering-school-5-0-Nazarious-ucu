@@ -182,7 +182,7 @@ func (a *App) init() ServiceContainer {
 	a.l.Info().Str("http_addr", a.cfg.ServerAddress()).Msg("HTTP server configured")
 
 	// Repository
-	repo := sqlite.NewSubscriptionRepository(db, a.l)
+	repo := sqlite.NewSubscriptionRepository(db, a.l, m)
 
 	// RabbitMQ
 	rabbitConn, err := a.setupConn()
@@ -193,7 +193,7 @@ func (a *App) init() ServiceContainer {
 	if err != nil {
 		a.l.Error().Err(err).Msg("RabbitMQ publisher error")
 	}
-	producer := producers.NewProducer(publisher, a.l)
+	producer := producers.NewProducer(publisher, a.l, m)
 
 	// Business services
 	subSvc := subs2.NewService(repo, producer)
@@ -210,6 +210,7 @@ func (a *App) init() ServiceContainer {
 	n := notifier.New(repo, weatherSvc, producer, a.l,
 		a.cfg.NotifierFreq.HourlyFrequency,
 		a.cfg.NotifierFreq.DailyFrequency,
+		m,
 	)
 
 	// gRPC server with metrics interceptors
