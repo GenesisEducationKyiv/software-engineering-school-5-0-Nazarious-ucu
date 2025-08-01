@@ -3,8 +3,9 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"time"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/http"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/metrics"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/models"
@@ -56,8 +57,8 @@ func (r *SubscriptionRepository) Create(
 			Str("email", data.Email).
 			Str("city", data.City).
 			Msg("subscription already exists, abort create")
-		r.m.BusinessErrors.WithLabelValues("subscription_exists", "409", "warning").Inc()
-		return errors.New("subscription already exists")
+		r.m.BusinessErrors.WithLabelValues("subscription_exists", "warning").Inc()
+		return http.ErrSubscriptionExists
 	}
 
 	r.log.Info().Ctx(ctx).

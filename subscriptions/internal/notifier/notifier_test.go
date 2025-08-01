@@ -6,11 +6,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/metrics"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/models"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/notifier"
