@@ -22,7 +22,8 @@ type SubscriptionRepository struct {
 func NewSubscriptionRepository(
 	db *sql.DB,
 	logger zerolog.Logger,
-	m *metrics.Metrics) *SubscriptionRepository {
+	m *metrics.Metrics,
+) *SubscriptionRepository {
 	logger = logger.With().Str("component", "SubscriptionRepository").Logger()
 	return &SubscriptionRepository{DB: db, log: logger, m: m}
 }
@@ -177,7 +178,8 @@ func (r *SubscriptionRepository) UpdateLastSent(ctx context.Context, subscriptio
 
 // GetConfirmedByFrequency retrieves all confirmed, non-unsubscribed subscriptions by frequency.
 func (r *SubscriptionRepository) GetConfirmedByFrequency(
-	ctx context.Context, frequency string) ([]models.Subscription, error) {
+	ctx context.Context, frequency string,
+) ([]models.Subscription, error) {
 	start := time.Now()
 	r.log.Debug().Ctx(ctx).Str("frequency", frequency).Msg("querying confirmed subscriptions by frequency")
 

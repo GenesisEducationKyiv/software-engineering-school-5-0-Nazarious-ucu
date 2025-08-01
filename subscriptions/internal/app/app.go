@@ -28,15 +28,13 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/subs"
+	weatherpb "github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/weather"
 	"github.com/gin-gonic/gin"
 	"github.com/pressly/goose/v3"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerfiles "github.com/swaggo/files"
 	swagger "github.com/swaggo/gin-swagger"
-	"go.uber.org/zap"
-
-	"github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/subs"
-	weatherpb "github.com/Nazarious-ucu/weather-subscription-api/protos/gen/go/v1.alpha/weather"
 )
 
 const (
@@ -55,11 +53,10 @@ type ServiceContainer struct {
 	SubRepository       sqlite.SubscriptionRepository
 	GrpcServer          *grpc.Server
 
-	Router     *gin.Engine
-	Srv        *http.Server
-	Db         *sql.DB
-	fileLogger *zap.Logger
-	M          *metrics.Metrics
+	Router *gin.Engine
+	Srv    *http.Server
+	Db     *sql.DB
+	M      *metrics.Metrics
 }
 
 type App struct {
@@ -197,7 +194,7 @@ func (a *App) init() ServiceContainer {
 
 	// Business services
 	subSvc := subs2.NewService(repo, producer)
-	grpcConn, err := grpc.DialContext(ctx, a.cfg.WeatherRPCAddr+a.cfg.WeatherRPCPort,
+	grpcConn, err := grpc.NewClient(a.cfg.WeatherRPCAddr+a.cfg.WeatherRPCPort,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
