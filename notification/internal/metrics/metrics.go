@@ -22,6 +22,7 @@ type Metrics struct {
 
 // NewMetrics constructs and registers all metrics under the given service namespace.
 func NewMetrics(serviceName string) *Metrics {
+	prog := prometheus.NewRegistry()
 	m := &Metrics{
 		ConsumerMessagesTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -74,7 +75,7 @@ func NewMetrics(serviceName string) *Metrics {
 	}
 
 	// Register everything, plus Go & process collectors
-	prometheus.MustRegister(
+	prog.MustRegister(
 		m.ConsumerMessagesTotal,
 		m.ConsumerProcessingDuration,
 		m.ConsumerErrorsTotal,

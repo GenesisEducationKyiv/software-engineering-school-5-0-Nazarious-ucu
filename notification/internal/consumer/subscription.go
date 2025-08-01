@@ -19,11 +19,11 @@ type emailSender interface {
 type Consumer struct {
 	emailSender emailSender
 	logger      zerolog.Logger
-	m           metrics.Metrics
+	m           *metrics.Metrics
 }
 
 // NewConsumer wires up the email sender, a scoped logger, and the metrics collector.
-func NewConsumer(emailSender emailSender, logger zerolog.Logger, m metrics.Metrics) *Consumer {
+func NewConsumer(emailSender emailSender, logger zerolog.Logger, m *metrics.Metrics) *Consumer {
 	logger = logger.With().Str("component", "Consumer").Logger()
 	return &Consumer{
 		emailSender: emailSender,
@@ -37,7 +37,7 @@ func (c *Consumer) ReceiveSubscription(d rabbitmq.Delivery) rabbitmq.Action {
 	const eventType = messaging.SubscribeRoutingKey
 
 	// record that we got a message
-	c.m.ConsumerMessagesTotal.WithLabelValues(eventType, "received").Inc()
+	c.m.ConsumerMessagesTotal.WithLabelValues(eventType).Inc()
 	c.logger.Debug().
 		Str("payload", string(d.Body)).
 		Msg("received subscription event")
@@ -69,7 +69,7 @@ func (c *Consumer) ReceiveSubscription(d rabbitmq.Delivery) rabbitmq.Action {
 	c.logger.Info().
 		Str("email", evt.Email).
 		Msg("confirmation email sent")
-	c.m.ConsumerMessagesTotal.WithLabelValues(eventType, "success").Inc()
+	c.m.ConsumerMessagesTotal.WithLabelValues(eventType).Inc()
 	return rabbitmq.Ack
 }
 
@@ -77,7 +77,7 @@ func (c *Consumer) ReceiveSubscription(d rabbitmq.Delivery) rabbitmq.Action {
 func (c *Consumer) ReceiveWeather(d rabbitmq.Delivery) rabbitmq.Action {
 	const eventType = "weather"
 
-	c.m.ConsumerMessagesTotal.WithLabelValues(eventType, "received").Inc()
+	c.m.ConsumerMessagesTotal.WithLabelValues(eventType).Inc()
 	c.logger.Debug().
 		Str("payload", string(d.Body)).
 		Msg("received weather event")
@@ -89,7 +89,7 @@ func (c *Consumer) ReceiveWeather(d rabbitmq.Delivery) rabbitmq.Action {
 			Str("event", eventType).
 			Msg("unmarshal error")
 		c.m.ConsumerErrorsTotal.WithLabelValues(eventType, "unmarshal_error").Inc()
-		c.m.ConsumerMessagesTotal.WithLabelValues(eventType, "error").Inc()
+		c.m.ConsumerMessagesTotal.WithLabelValues(eventType).Inc()
 		return rabbitmq.NackDiscard
 	}
 
@@ -107,7 +107,7 @@ func (c *Consumer) ReceiveWeather(d rabbitmq.Delivery) rabbitmq.Action {
 			Msg("failed to send weather email")
 		c.m.EmailErrorsTotal.WithLabelValues(eventType).Inc()
 		c.m.ConsumerErrorsTotal.WithLabelValues(eventType, "send_email_error").Inc()
-		c.m.ConsumerMessagesTotal.WithLabelValues(eventType, "error").Inc()
+		c.m.ConsumerMessagesTotal.WithLabelValues(eventType).Inc()
 		return rabbitmq.NackDiscard
 	}
 
@@ -115,6 +115,6 @@ func (c *Consumer) ReceiveWeather(d rabbitmq.Delivery) rabbitmq.Action {
 		Str("email", evt.Email).
 		Str("city", fc.City).
 		Msg("weather email sent")
-	c.m.ConsumerMessagesTotal.WithLabelValues(eventType, "success").Inc()
+	c.m.ConsumerMessagesTotal.WithLabelValues(eventType).Inc()
 	return rabbitmq.Ack
 }
