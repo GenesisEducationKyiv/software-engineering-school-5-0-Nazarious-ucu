@@ -1,0 +1,10 @@
+go 1.24.5
+
+use (
+	./gateway
+	./notification
+	./pkg
+	./protos
+	./subscriptions
+	./weather
+)

@@ -1,0 +1,23 @@
+name: gateway-CI
+on:
+  push:
+    branches: [ '*' ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up env
+        uses: ./.github/actions/setup
+        with:
+          go-version-file: 'gateway/go.mod'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Run Linter
+        run: task gateway:lint

@@ -1,0 +1,38 @@
+version: "3"
+
+tasks:
+  generate:
+    desc: Generate protobuf and swagger files
+    deps: [install:deps]
+    cmds:
+      - buf generate
+
+  install:deps:
+    desc: Update dependencies
+    cmds:
+      - buf dep update
+
+  run:weather-docs:
+    cmds:
+      - |
+        docker run --rm -p 3001:8080 \
+        -e BASE_URL=/swagger \
+        -e SWAGGER_JSON=/docs/weather.swagger.json \
+        -v "$(pwd)/gen/swagger/v1.alpha/weather:/docs" \
+        swaggerapi/swagger-ui
+
+  run:subscription-docs:
+    cmds:
+      - |
+        docker run --rm -p 3002:8080 \
+        -e BASE_URL=/swagger \
+        -e SWAGGER_JSON=/docs/subscription.swagger.json \
+        -v "$(pwd)/gen/swagger/v1.alpha/subs:/docs" \
+        swaggerapi/swagger-ui
+
+  install:swagger:
+    desc: Install swagger-ui
+    cmds:
+      - docker pull swaggerapi/swagger-ui
+    status:
+      - docker images | grep swagger-ui
