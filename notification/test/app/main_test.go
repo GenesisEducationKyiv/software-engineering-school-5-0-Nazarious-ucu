@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/notification/internal/metrics"
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+
 	"github.com/wagslane/go-rabbitmq"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -32,7 +35,14 @@ func TestMain(m *testing.M) {
 	cfg.Email.Host = "localhost"
 	cfg.Email.Port = "1025"
 
-	application := app.New(*cfg, log.Default())
+	l, err := logger.NewLogger("log/notifications-test.log", "notification_service_test")
+	if err != nil {
+		log.Panicf("failed to initialize logger: %v", err)
+	}
+
+	met := metrics.NewMetrics("notification_service_test")
+
+	application := app.New(*cfg, l, met)
 	ctx := context.Background()
 
 	ctxWithCancel, cancel := context.WithCancel(ctx)

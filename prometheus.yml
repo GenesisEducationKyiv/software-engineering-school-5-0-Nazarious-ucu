@@ -7,3 +7,4 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ["weather-api:8080"]
+      - targets: ["gateway:8081"]

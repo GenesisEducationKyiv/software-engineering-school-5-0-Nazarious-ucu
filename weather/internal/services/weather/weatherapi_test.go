@@ -4,10 +4,12 @@ package weather_test
 
 import (
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+	"github.com/stretchr/testify/require"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/mock"
@@ -59,7 +61,10 @@ func TestGetByCity_Success(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, log.Default())
+	l, err := logger.NewLogger("test", "weather_api_test_success")
+	require.NoError(t, err)
+
+	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, l)
 
 	data, err := weatherAPIClient.Fetch(ctx, "London")
 	assert.NoError(t, err)
@@ -83,7 +88,9 @@ func TestGetByCity_CityNotFound(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, log.Default())
+	l, err := logger.NewLogger("test", "weather_api_test_city_not_found")
+	require.NoError(t, err)
+	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, l)
 
 	data, err := weatherAPIClient.Fetch(ctx, "UnknownCity")
 	assert.Error(t, err)
@@ -105,7 +112,10 @@ func TestGetByCity_APIError(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, log.Default())
+	l, err := logger.NewLogger("test", "weather_api_test_api_error")
+	require.NoError(t, err)
+
+	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, l)
 
 	data, err := weatherAPIClient.Fetch(ctx, "London")
 	assert.Error(t, err)
@@ -127,7 +137,10 @@ func TestGetByCity_InvalidAPIKey(t *testing.T) {
 		m.AssertExpectations(t)
 	})
 
-	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, log.Default())
+	l, err := logger.NewLogger("test", "weather_api_test_invalid_api_key")
+	require.NoError(t, err)
+
+	weatherAPIClient := weather.NewClientWeatherAPI("1234567890", "", m, l)
 
 	data, err := weatherAPIClient.Fetch(ctx, "London")
 	assert.Error(t, err)

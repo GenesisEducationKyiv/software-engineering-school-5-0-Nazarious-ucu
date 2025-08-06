@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/config"
 
@@ -27,8 +29,10 @@ func main() {
 		log.Panicf("failed to load configuration: %v", err)
 	}
 
-	l := log.New(log.Writer(), "WeatherSubscriptionAPI: ", log.LstdFlags)
-
+	l, err := logger.NewLogger("logs/subscriptions.log", "subscriptions")
+	if err != nil {
+		log.Panicf("failed to initialize logger: %v", err)
+	}
 	application := app.New(*cfg, l)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

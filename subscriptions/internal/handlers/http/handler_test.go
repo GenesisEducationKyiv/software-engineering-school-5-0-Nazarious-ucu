@@ -4,11 +4,15 @@ package http_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+	"github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/metrics"
 
 	http2 "github.com/Nazarious-ucu/weather-subscription-api/subscriptions/internal/handlers/http"
 
@@ -89,7 +93,12 @@ func TestSubscribeEndpoint(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			c.Request = req
 
-			h := http2.NewHandler(m)
+			l, err := logger.NewLogger("logs/subscriptions_test.log", "handler_test")
+			require.NoError(t, err)
+
+			met := metrics.NewMetrics("", &sql.DB{}, "test")
+
+			h := http2.NewHandler(m, l, met)
 			h.Subscribe(c)
 
 			assert.Equal(t, tc.wantCode, rec.Code)
@@ -148,7 +157,12 @@ func TestConfirmEndpoint(t *testing.T) {
 
 			c.Request = req
 
-			h := http2.NewHandler(m)
+			l, err := logger.NewLogger("logs/subscriptions_test.log", "handler_test")
+			require.NoError(t, err)
+
+			met := metrics.NewMetrics("", &sql.DB{}, "test")
+
+			h := http2.NewHandler(m, l, met)
 			h.Confirm(c)
 
 			assert.Equal(t, tc.wantCode, rec.Code)
@@ -204,7 +218,12 @@ func TestUnsubscribeEndpoint(t *testing.T) {
 
 			c.Request = req
 
-			h := http2.NewHandler(m)
+			l, err := logger.NewLogger("logs/subscriptions_test.log", "handler_test")
+			require.NoError(t, err)
+
+			met := metrics.NewMetrics("", &sql.DB{}, "test")
+
+			h := http2.NewHandler(m, l, met)
 			h.Unsubscribe(c)
 
 			assert.Equal(t, tc.wantCode, rec.Code)

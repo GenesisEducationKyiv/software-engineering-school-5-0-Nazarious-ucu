@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/services/metrics"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/app"
 	"github.com/Nazarious-ucu/weather-subscription-api/weather/internal/config"
 )
@@ -45,7 +48,13 @@ func TestMain(m *testing.M) {
 	cfg.Server.Host = "127.0.0.1"
 	cfg.Server.GrpcPort = "50051"
 
-	application := app.New(*cfg, log.Default())
+	l, err := logger.NewLogger("tests_logs", "weather_integration_test")
+	if err != nil {
+		log.Panicf("failed to create logger: %v", err)
+	}
+	met := metrics.NewMetrics("weather_integration_test")
+
+	application := app.New(*cfg, l, met)
 	ctxWithTimeout, cancel := context.WithTimeout(
 		context.Background(),
 		time.Duration(cfg.Server.ReadTimeout)*time.Second)

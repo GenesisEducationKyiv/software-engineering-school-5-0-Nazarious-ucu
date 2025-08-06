@@ -10,6 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nazarious-ucu/weather-subscription-api/pkg/logger"
+
+	_ "modernc.org/sqlite"
+
 	"github.com/Nazarious-ucu/weather-subscription-api/pkg/messaging"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -29,6 +33,7 @@ var (
 
 func TestMain(m *testing.M) {
 	fmt.Println("Starting integration tests...")
+	ctx := context.Background()
 
 	// Initialize the application
 	cfg, err := config.NewConfig()
@@ -42,8 +47,12 @@ func TestMain(m *testing.M) {
 	cfg.Server.Host = "127.0.0.1"
 	cfg.Server.GrpcPort = "8081"
 
-	application := app.New(*cfg, log.Default())
-	ctx := context.Background()
+	l, err := logger.NewLogger("logs/subscriptions_test.log", "subscriptions_test")
+	if err != nil {
+		log.Panicf("failed to initialize logger: %v", err)
+	}
+
+	application := app.New(*cfg, l)
 
 	database, err := app.CreateSqliteDb(ctx, cfg.DB.Dialect, cfg.DB.Source)
 	if err != nil {
